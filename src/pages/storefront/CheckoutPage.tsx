@@ -95,7 +95,11 @@ export function CheckoutPage() {
       message = message.replace('{notes}', data.notes || (t('storefront.noNotes') as string) || '');
 
       const whatsappUrl = generateWhatsAppUrl(currentStore.whatsappNumber, message);
-      window.open(whatsappUrl, '_blank');
+      const popup = window.open(whatsappUrl, '_blank');
+      if (!popup || popup.closed) {
+        // Fallback in case popups are blocked
+        window.location.href = whatsappUrl;
+      }
 
       clearCart();
       navigate(`/store/${slug}/success?order=${orderNumber}`, { replace: true });

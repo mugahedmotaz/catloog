@@ -31,7 +31,9 @@ export function generateStoreSlug(name: string): string {
 }
 
 export function generateWhatsAppUrl(phone: string, message: string): string {
-  const cleanPhone = phone.replace(/[^\d+]/g, '');
+  // WhatsApp requires full international number: digits only, no '+', spaces, or leading zeros
+  const cleanPhone = phone.replace(/\D/g, '');
   const encodedMessage = encodeURIComponent(message);
-  return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+  // api.whatsapp.com tends to be more tolerant across devices/browsers
+  return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
 }

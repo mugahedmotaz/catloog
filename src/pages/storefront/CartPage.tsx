@@ -49,7 +49,11 @@ export function CartPage() {
     message = message.replace('{notes}', customerInfo.notes || 'No additional notes');
 
     const whatsappUrl = generateWhatsAppUrl(currentStore.whatsappNumber, message);
-    window.open(whatsappUrl, '_blank');
+    const popup = window.open(whatsappUrl, '_blank');
+    if (!popup || popup.closed) {
+      // Fallback in case popups are blocked
+      window.location.href = whatsappUrl;
+    }
     
     // Clear cart after successful order
     clearCart();
