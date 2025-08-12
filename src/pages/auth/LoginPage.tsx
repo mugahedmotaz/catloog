@@ -1,0 +1,165 @@
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../../components/ui/card';
+import { LanguageToggle } from '../../components/LanguageToggle';
+import { Store, Mail, Lock, LogIn } from 'lucide-react';
+
+export function LoginPage() {
+  const { t } = useTranslation();
+  const { login, loginWithGoogle, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>(() => ({}));
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formInfo, setFormInfo] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+    setFormInfo(null);
+    // Basic inline validation
+    const nextErrors: typeof errors = {};
+    if (!formData.email) {
+      nextErrors.email = 'الرجاء إدخال البريد الإلكتروني';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      nextErrors.email = 'صيغة البريد الإلكتروني غير صحيحة';
+    }
+    if (!formData.password) {
+      nextErrors.password = 'الرجاء إدخال كلمة المرور';
+    } else if (formData.password.length < 6) {
+      nextErrors.password = 'كلمة المرور يجب ألا تقل عن 6 أحرف';
+    }
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
+    const success = await login(formData.email, formData.password);
+    if (success) {
+      setFormInfo('تم تسجيل الدخول بنجاح، جارٍ تحويلك إلى لوحة التحكم...');
+      navigate('/dashboard');
+    } else {
+      setFormError('تعذر تسجيل الدخول. تأكد من بيانات الدخول، أو تحقق من تأكيد البريد.');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="absolute top-4 right-4">
+        <LanguageToggle />
+      </div>
+      
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="flex items-center justify-center mb-4">
+            <div className="bg-teal-100 p-3 rounded-full">
+              <Store className="h-8 w-8 text-teal-600" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-bold text-gray-900">
+         Catloog
+          </CardTitle>
+          <p className="text-gray-600 mt-2">
+            {t('auth.login')} to your merchant account
+          </p>
+        </CardHeader>
+
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {formError && (
+              <div className="rounded-md border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-sm">
+                {formError}
+              </div>
+            )}
+            {formInfo && (
+              <div className="rounded-md border border-teal-200 bg-teal-50 text-teal-700 px-3 py-2 text-sm">
+                {formInfo}
+              </div>
+            )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                {t('auth.email')}
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  type="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  className="pl-10"
+                  required
+                />
+              </div>
+              {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                {t('auth.password')}
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  type="password"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                  className="pl-10"
+                  required
+                />
+              </div>
+              {errors.password && <p className="text-xs text-red-600">{errors.password}</p>}
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-teal-600 hover:bg-teal-700 text-white"
+              disabled={isLoading}
+            >
+              {isLoading ? t('common.loading') : t('auth.signIn')}
+            </Button>
+            <div className="flex items-center gap-3 my-2">
+              <div className="h-px bg-gray-200 flex-1" />
+              <span className="text-xs text-gray-400">or</span>
+              <div className="h-px bg-gray-200 flex-1" />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={loginWithGoogle}
+            >
+              <LogIn className="h-4 w-4 mr-2" />
+              Sign in with Google
+            </Button>
+          </form>
+        </CardContent>
+
+        <CardFooter className="flex flex-col space-y-4 text-center">
+          <Link
+            to="/forgot-password"
+            className="text-sm text-teal-600 hover:text-teal-700 transition-colors"
+          >
+            {t('auth.forgotPassword')}
+          </Link>
+          
+          <div className="text-sm text-gray-600">
+            {t('auth.dontHaveAccount')}{' '}
+            <Link
+              to="/register"
+              className="text-teal-600 hover:text-teal-700 font-medium transition-colors"
+            >
+              {t('auth.signUp')}
+            </Link>
+          </div>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+}
