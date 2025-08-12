@@ -1,3 +1,4 @@
+/* stylelint-disable at-rule-no-unknown */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,7 +8,6 @@
   .app-container {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
-
   /* Standard card */
   .card {
     @apply bg-white border border-gray-200 rounded-xl shadow-sm;
@@ -32,3 +32,5 @@
     @apply gap-4 sm:gap-6 lg:gap-8;
   }
 }
+
+/* stylelint-enable at-rule-no-unknown */

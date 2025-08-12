@@ -25,7 +25,7 @@ export function CategoriesPage() {
     const map: Record<string, typeof products> = {};
     for (const p of products) {
       if (storeId && p.storeId !== storeId) continue;
-      const key = String(p.category ?? 'uncategorized');
+      const key = String(p.categoryId ?? 'uncategorized');
       if (!map[key]) map[key] = [] as any;
       map[key].push(p);
     }
@@ -44,7 +44,7 @@ export function CategoriesPage() {
             </div>
             <p className="text-gray-600 mb-3">{cat.description}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {(productsByCategory[String(cat.name)] || []).map((p) => (
+              {(productsByCategory[String(cat.id)] || []).map((p) => (
                 <Link key={p.id} to={`/store/${slug}/product/${p.id}`} className="border rounded hover:shadow">
                   <img src={p.images?.[0] || 'https://placehold.co/400x300'} alt={p.name} className="w-full h-40 object-cover rounded-t" />
                   <div className="p-3">
