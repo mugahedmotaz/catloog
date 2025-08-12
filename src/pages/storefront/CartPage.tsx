@@ -40,13 +40,44 @@ export function CartPage() {
       `• ${item.product.name} x${item.quantity} - ${formatPrice(item.product.price * item.quantity, currentStore.settings.currency)}`
     ).join('\n');
 
-    // Replace template placeholders
-    let message = currentStore.settings.orderMessageTemplate;
-    message = message.replace('{orderDetails}', orderDetails);
-    message = message.replace('{total}', formatPrice(totalPrice, currentStore.settings.currency));
-    message = message.replace('{customerName}', customerInfo.name);
-    message = message.replace('{customerPhone}', customerInfo.phone);
-    message = message.replace('{notes}', customerInfo.notes || 'No additional notes');
+    const dateStr = new Date().toLocaleString();
+    const professionalDefault = [
+      `مرحباً فريق ${currentStore.name} 👋`,
+      'تم استلام طلب جديد ✅',
+      `التاريخ: ${dateStr}`,
+      '—',
+      'بيانات العميل:',
+      `• الاسم: ${customerInfo.name}`,
+      `• الجوال: ${customerInfo.phone}`,
+      '—',
+      'تفاصيل السلة:',
+      `${orderDetails}`,
+      '—',
+      `الإجمالي: ${formatPrice(totalPrice, currentStore.settings.currency)}`,
+      `ملاحظات: ${customerInfo.notes || 'لا توجد ملاحظات'}`,
+      '—',
+      `رابط المتجر: ${window.location.origin}/store/${slug}`
+    ].join('\n');
+
+    // If merchant provided a custom template, fill placeholders; else use professional default
+    let message = currentStore.settings.orderMessageTemplate?.trim();
+    if (message) {
+      message = message.replace('{storeName}', currentStore.name);
+      message = message.replace('{date}', dateStr);
+      message = message.replace('{orderDetails}', orderDetails);
+      message = message.replace('{subtotal}', formatPrice(totalPrice, currentStore.settings.currency));
+      message = message.replace('{total}', formatPrice(totalPrice, currentStore.settings.currency));
+      message = message.replace('{customerName}', customerInfo.name);
+      message = message.replace('{customerPhone}', customerInfo.phone);
+      message = message.replace('{notes}', customerInfo.notes || '');
+      message = message.replace('{storeUrl}', `${window.location.origin}/store/${slug}`);
+      // Backwards compatibility for templates referencing delivery placeholders
+      message = message.replace('{deliveryMethod}', '');
+      message = message.replace('{deliveryFee}', '');
+      message = message.replace('{orderNumber}', '');
+    } else {
+      message = professionalDefault;
+    }
 
     const whatsappUrl = generateWhatsAppUrl(currentStore.whatsappNumber, message);
     const popup = window.open(whatsappUrl, '_blank');

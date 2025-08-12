@@ -87,12 +87,52 @@ export function CheckoutPage() {
         )
         .join('\n');
 
-      let message = currentStore.settings.orderMessageTemplate;
-      message = message.replace('{orderDetails}', orderDetails);
-      message = message.replace('{total}', formatPrice(total, currentStore.settings.currency));
-      message = message.replace('{customerName}', data.name);
-      message = message.replace('{customerPhone}', data.phone);
-      message = message.replace('{notes}', data.notes || (t('storefront.noNotes') as string) || '');
+      const deliveryMethodLabel = data.deliveryMethod === 'delivery' ? (t('storefront.delivery') || 'توصيل') : (t('storefront.pickup') || 'استلام من المتجر');
+      const subtotal = totalPrice;
+      const dateStr = new Date().toLocaleString();
+
+      // Professional default message
+      const professionalDefault = [
+        `مرحباً فريق ${currentStore.name} 👋`,
+        'تم استلام طلب جديد ✅',
+        `رقم الطلب: ${orderNumber}`,
+        `التاريخ: ${dateStr}`,
+        '—',
+        'بيانات العميل:',
+        `• الاسم: ${data.name}`,
+        `• الجوال: ${data.phone}`,
+        `• طريقة الاستلام: ${deliveryMethodLabel}`,
+        data.deliveryMethod === 'delivery' ? `• رسوم التوصيل: ${formatPrice(deliveryFee, currentStore.settings.currency)}` : undefined,
+        '—',
+        'تفاصيل الطلب:',
+        `${orderDetails}`,
+        '—',
+        `المجموع (قبل التوصيل): ${formatPrice(subtotal, currentStore.settings.currency)}`,
+        data.deliveryMethod === 'delivery' ? `رسوم التوصيل: ${formatPrice(deliveryFee, currentStore.settings.currency)}` : undefined,
+        `الإجمالي المستحق: ${formatPrice(total, currentStore.settings.currency)}`,
+        `ملاحظات: ${data.notes || (t('storefront.noNotes') as string) || ''}`,
+        '—',
+        `رابط المتجر: ${window.location.origin}/store/${slug}`
+      ].filter(Boolean).join('\n');
+
+      // If merchant provided a custom template, fill placeholders; else use professional default
+      let message = currentStore.settings.orderMessageTemplate?.trim();
+      if (message) {
+        message = message.replace('{storeName}', currentStore.name);
+        message = message.replace('{orderNumber}', orderNumber);
+        message = message.replace('{date}', dateStr);
+        message = message.replace('{deliveryMethod}', deliveryMethodLabel);
+        message = message.replace('{deliveryFee}', formatPrice(deliveryFee, currentStore.settings.currency));
+        message = message.replace('{subtotal}', formatPrice(subtotal, currentStore.settings.currency));
+        message = message.replace('{orderDetails}', orderDetails);
+        message = message.replace('{total}', formatPrice(total, currentStore.settings.currency));
+        message = message.replace('{customerName}', data.name);
+        message = message.replace('{customerPhone}', data.phone);
+        message = message.replace('{notes}', data.notes || (t('storefront.noNotes') as string) || '');
+        message = message.replace('{storeUrl}', `${window.location.origin}/store/${slug}`);
+      } else {
+        message = professionalDefault;
+      }
 
       const whatsappUrl = generateWhatsAppUrl(currentStore.whatsappNumber, message);
       const popup = window.open(whatsappUrl, '_blank');
