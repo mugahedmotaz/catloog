@@ -1,14 +1,14 @@
 import { useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useStore } from '../../contexts/StoreProvider';
 import { Card, CardContent } from '../../components/ui/card';
+import FeatureGate from '../../components/FeatureGate';
+import UpgradePrompt from '../../components/UpgradePrompt';
 
 function formatNumber(n: number) {
   return new Intl.NumberFormat().format(n);
 }
 
 export function AnalyticsPage() {
-  const { t } = useTranslation();
   const { currentStore, orders } = useStore();
 
   const scoped = useMemo(() => orders.filter(o => o.storeId === currentStore?.id), [orders, currentStore?.id]);
@@ -51,23 +51,27 @@ export function AnalyticsPage() {
   }, [scoped]);
 
   if (!currentStore) {
-    return <div className="p-6 text-gray-500">{t('analytics.noStore') || 'Create a store to see analytics.'}</div>;
+    return <div className="p-6 text-gray-500">Create a store to see analytics.</div>;
   }
 
   return (
+    <FeatureGate
+      feature="analytics"
+      fallback={<UpgradePrompt title="Upgrade to see analytics" message="Analytics are not available on your current plan." />}
+    >
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">{t('analytics.title') || 'Analytics'}</h1>
+      <h1 className="text-2xl font-bold">Analytics</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card><CardContent className="p-6"><div className="text-sm text-gray-500">{t('analytics.revenue') || 'Total Revenue'}</div><div className="text-2xl font-bold">{formatNumber(stats.totalRevenue)}</div></CardContent></Card>
-        <Card><CardContent className="p-6"><div className="text-sm text-gray-500">{t('analytics.orders') || 'Orders'}</div><div className="text-2xl font-bold">{formatNumber(stats.totalOrders)}</div></CardContent></Card>
-        <Card><CardContent className="p-6"><div className="text-sm text-gray-500">{t('analytics.aov') || 'Avg Order Value'}</div><div className="text-2xl font-bold">{formatNumber(stats.avgOrder)}</div></CardContent></Card>
+        <Card><CardContent className="p-6"><div className="text-sm text-gray-500">Total Revenue</div><div className="text-2xl font-bold">{formatNumber(stats.totalRevenue)}</div></CardContent></Card>
+        <Card><CardContent className="p-6"><div className="text-sm text-gray-500">Orders</div><div className="text-2xl font-bold">{formatNumber(stats.totalOrders)}</div></CardContent></Card>
+        <Card><CardContent className="p-6"><div className="text-sm text-gray-500">Avg Order Value</div><div className="text-2xl font-bold">{formatNumber(stats.avgOrder)}</div></CardContent></Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardContent className="p-6">
-            <div className="text-sm text-gray-600 mb-3">{t('analytics.orders7days') || 'Orders (last 7 days)'}</div>
+            <div className="text-sm text-gray-600 mb-3">Orders (last 7 days)</div>
             <div className="flex items-end gap-2 h-40">
               {stats.days.map((d, idx) => (
                 <div key={idx} className="flex-1 flex flex-col items-center gap-2">
@@ -81,9 +85,9 @@ export function AnalyticsPage() {
 
         <Card>
           <CardContent className="p-6">
-            <div className="text-sm text-gray-600 mb-3">{t('analytics.topProducts') || 'Top Products'}</div>
+            <div className="text-sm text-gray-600 mb-3">Top Products</div>
             <div className="space-y-2">
-              {stats.topProducts.length === 0 && <div className="text-gray-500 text-sm">{t('analytics.noTop') || 'No data yet'}</div>}
+              {stats.topProducts.length === 0 && <div className="text-gray-500 text-sm">No data yet</div>}
               {stats.topProducts.map((p, i) => (
                 <div key={i} className="flex items-center justify-between text-sm bg-gray-50 rounded p-2">
                   <div className="font-medium">{p.name}</div>
@@ -95,6 +99,7 @@ export function AnalyticsPage() {
         </Card>
       </div>
     </div>
+    </FeatureGate>
   );
 }
 

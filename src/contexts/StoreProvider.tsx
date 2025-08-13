@@ -261,9 +261,9 @@ export function StoreProvider({ children }: StoreProviderProps) {
       const message: string = error?.message || '';
       // Handle unique constraint violation (e.g., duplicate slug)
       if (error?.code === '23505' || /duplicate key value/i.test(message) || /unique constraint/i.test(message)) {
-        toast.error('الاسم/الرابط مستخدم بالفعل، الرجاء اختيار اسم آخر');
+        toast.error('Name/slug is already in use. Please choose another');
       } else {
-        toast.error(message || 'فشل إنشاء المتجر');
+        toast.error(message || 'Failed to create store');
       }
       return false;
     } finally {
@@ -300,9 +300,9 @@ export function StoreProvider({ children }: StoreProviderProps) {
       console.error('Error updating store:', error);
       const message: string = error?.message || '';
       if (error?.code === '23505' || /duplicate key value/i.test(message) || /unique constraint/i.test(message)) {
-        toast.error('الاسم/الرابط مستخدم بالفعل، الرجاء اختيار اسم آخر');
+        toast.error('Name/slug is already in use. Please choose another');
       } else {
-        toast.error(message || 'فشل تحديث بيانات المتجر');
+        toast.error(message || 'Failed to update store settings');
       }
       return false;
     } finally {

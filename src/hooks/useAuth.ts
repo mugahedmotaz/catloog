@@ -82,12 +82,12 @@ export function useAuthProvider() {
       if (error) throw error;
       // Require email confirmation: do not auto-login.
       // Show guidance and let the Register page redirect to /login if desired.
-      toast.success('تم إنشاء الحساب. يرجى التحقق من بريدك لتأكيد الحساب.');
+      toast.success('Account created. Please check your email to confirm your account.');
       return true;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Signup error:', error);
-      toast.error('تعذر إنشاء الحساب. حاول لاحقًا');
+      toast.error('Could not create account. Please try again later.');
       return false;
     } finally {
       setIsLoading(false);
@@ -114,7 +114,7 @@ export function useAuthProvider() {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Google OAuth error:', error);
-      toast.error('تعذر تسجيل الدخول عبر Google');
+      toast.error('Could not sign in with Google');
     }
   };
 
@@ -125,12 +125,12 @@ export function useAuthProvider() {
         redirectTo: window.location.origin + '/login',
       });
       if (error) throw error;
-      toast.success('تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك');
+      toast.success('Password reset link has been sent to your email');
       return true;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Reset password error:', error);
-      toast.error('تعذر إرسال رابط إعادة التعيين');
+      toast.error('Could not send reset link');
       return false;
     } finally {
       setIsLoading(false);
@@ -142,12 +142,12 @@ export function useAuthProvider() {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      toast.success('تم تحديث كلمة المرور بنجاح');
+      toast.success('Password updated successfully');
       return true;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Update password error:', error);
-      toast.error('تعذر تحديث كلمة المرور');
+      toast.error('Could not update password');
       return false;
     } finally {
       setIsLoading(false);
@@ -159,12 +159,12 @@ export function useAuthProvider() {
     try {
       const { error } = await supabase.auth.verifyOtp({ email, token, type: 'signup' });
       if (error) throw error;
-      toast.success('تم تأكيد البريد بنجاح، يمكنك تسجيل الدخول الآن');
+      toast.success('Email verified. You can log in now');
       return true;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Verify OTP error:', error);
-      toast.error('رمز التحقق غير صحيح أو منتهي');
+      toast.error('Invalid or expired verification code');
       return false;
     } finally {
       setIsLoading(false);

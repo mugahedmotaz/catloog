@@ -28,7 +28,7 @@ export function DashboardEntry() {
         if (mounted) setHasStore(_hasStore);
       } catch (e) {
         // eslint-disable-next-line no-console
-        console.error('فشل التحقق من المتجر:', e);
+        console.error('Store check failed:', e);
         if (mounted) setHasStore(false);
       } finally {
         if (mounted) setChecking(false);
@@ -81,26 +81,26 @@ export function DashboardEntry() {
 
   if (checking) {
     return (
-      <div className="min-h-[50vh] flex items-center justify-center text-gray-600">جاري التحميل...</div>
+      <div className="min-h-[50vh] flex items-center justify-center text-gray-600">Loading...</div>
     );
   }
 
-  // إذا لم يكن للمستخدم متجر، اعرض بطاقة بدء الاستخدام
+  // If the user has no store, show getting started card
   if (!hasStore) {
     return (
       <div className="max-w-3xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle>ابدأ بإعداد متجرك</CardTitle>
+            <CardTitle>Get started with your store</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-gray-700">قبل عرض لوحة التحكم، قم بإعداد بيانات متجرك الأساسية.</p>
+            <p className="text-gray-700">Before viewing the dashboard, set up your store basics.</p>
             <div className="flex gap-3">
               <Button onClick={() => navigate('/dashboard/store?modal=1')}>
-                فتح نافذة إعداد المتجر
+                Open store setup modal
               </Button>
               <Button variant="outline" onClick={() => navigate('/dashboard/store')}>
-                فتح صفحة الإعدادات
+                Open settings page
               </Button>
             </div>
           </CardContent>
@@ -109,6 +109,6 @@ export function DashboardEntry() {
     );
   }
 
-  // إذا كان للمستخدم متجر، اعرض نظرة عامة
+  // If the user has a store, show overview
   return <DashboardOverview />;
 }

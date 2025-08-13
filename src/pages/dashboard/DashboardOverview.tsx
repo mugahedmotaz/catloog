@@ -1,5 +1,4 @@
  
-import { useTranslation } from 'react-i18next';
 import { 
   DollarSign, 
   ShoppingCart, 
@@ -7,13 +6,18 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../contexts/StoreProvider';
 import { formatPrice } from '../../lib/utils';
+import FeatureGate from '../../components/FeatureGate';
+import UpgradePrompt from '../../components/UpgradePrompt';
+import { FEATURES } from '../../constants/features';
  
 
 export function DashboardOverview() {
-  const { t } = useTranslation();
   const { products, orders, categories } = useStore();
+  const navigate = useNavigate();
 
   const stats = {
     totalRevenue: orders.reduce((sum, order) => sum + order.total, 0),
@@ -30,12 +34,26 @@ export function DashboardOverview() {
 
   return (
     <div className="space-y-6">
+      {/* Upgrade CTA */}
+      <Card>
+        <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm text-gray-600">Unlock higher limits and advanced features.</p>
+            <h3 className="text-lg font-semibold">Upgrade your plan</h3>
+          </div>
+          <div className="flex gap-2">
+            <Button className="bg-teal-600 text-white hover:bg-teal-700" onClick={() => navigate('/dashboard/upgrade')}>Upgrade</Button>
+            <Button variant="outline" onClick={() => navigate('/dashboard/billing')}>View invoices</Button>
+          </div>
+        </CardContent>
+      </Card>
       {/* Stats Grid */}
+      <FeatureGate feature={FEATURES.analytics} fallback={<UpgradePrompt title="Upgrade to unlock analytics" message="Overview analytics are not available on your current plan." /> }>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
-              {t('dashboard.totalRevenue')}
+              Total Revenue
             </CardTitle>
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
@@ -52,7 +70,7 @@ export function DashboardOverview() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
-              {t('dashboard.totalOrders')}
+              Total Orders
             </CardTitle>
             <ShoppingCart className="h-4 w-4 text-blue-600" />
           </CardHeader>
@@ -67,7 +85,7 @@ export function DashboardOverview() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
-              {t('dashboard.totalProducts')}
+              Total Products
             </CardTitle>
             <Package className="h-4 w-4 text-purple-600" />
           </CardHeader>
@@ -82,7 +100,7 @@ export function DashboardOverview() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
-              {t('dashboard.conversionRate')}
+              Conversion Rate
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-teal-600" />
           </CardHeader>
@@ -94,15 +112,17 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
       </div>
+      </FeatureGate>
 
       {/* Recent Orders and Top Products */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Orders */}
+        <FeatureGate feature={FEATURES.orders} fallback={<UpgradePrompt title="Upgrade to view recent orders" message="Orders overview is not available on your current plan." /> }>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
               <ShoppingCart className="h-5 w-5 mr-2" />
-              {t('dashboard.recentOrders')}
+              Recent Orders
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -111,16 +131,16 @@ export function DashboardOverview() {
                 <thead className="sticky top-0 bg-white z-10">
                   <tr className="text-slate-600">
                     <th className="text-left font-semibold py-2">#</th>
-                    <th className="text-left font-semibold py-2">{t('orders.customer', 'Customer')}</th>
-                    <th className="text-left font-semibold py-2">{t('orders.total', 'Total')}</th>
-                    <th className="text-left font-semibold py-2">{t('orders.status', 'Status')}</th>
+                    <th className="text-left font-semibold py-2">Customer</th>
+                    <th className="text-left font-semibold py-2">Total</th>
+                    <th className="text-left font-semibold py-2">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {recentOrders.map((order) => (
                     <tr key={order.id} className="border-t border-slate-200 hover:bg-slate-50">
                       <td className="py-2">{order.orderNumber}</td>
-                      <td className="py-2">{(order as any).customerName || t('orders.guest', 'Guest')}</td>
+                      <td className="py-2">{(order as any).customerName || 'Guest'}</td>
                       <td className="py-2">{formatPrice(order.total)}</td>
                       <td className="py-2">
                         <span className={`text-xs px-2 py-1 rounded-full inline-block ${
@@ -129,7 +149,10 @@ export function DashboardOverview() {
                           order.status === 'completed' ? 'bg-green-100 text-green-700' :
                           'bg-red-100 text-red-700'
                         }`}>
-                          {t(`orders.${order.status}`)}
+                          {order.status === 'pending' ? 'Pending' :
+                           order.status === 'confirmed' ? 'Confirmed' :
+                           order.status === 'completed' ? 'Completed' :
+                           'Cancelled'}
                         </span>
                       </td>
                     </tr>
@@ -139,13 +162,14 @@ export function DashboardOverview() {
             </div>
           </CardContent>
         </Card>
+        </FeatureGate>
 
         {/* Top Products */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
               <Package className="h-5 w-5 mr-2" />
-              {t('dashboard.topProducts')}
+              Top Products
             </CardTitle>
           </CardHeader>
           <CardContent>

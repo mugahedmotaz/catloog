@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useStore } from '../../contexts/StoreProvider';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import toast from 'react-hot-toast';
+import FeatureGate from '../../components/FeatureGate';
+import UpgradePrompt from '../../components/UpgradePrompt';
 
 interface ThemeDraft {
   primaryColor: string;
@@ -24,7 +25,6 @@ const FONT_OPTIONS = [
 ];
 
 export function CustomizePage() {
-  const { t, i18n } = useTranslation();
   const { currentStore, updateStore, isLoading } = useStore();
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<ThemeDraft | null>(null);
@@ -62,20 +62,29 @@ export function CustomizePage() {
     setSaving(true);
     try {
       const ok = await updateStore(currentStore.id, { theme: draft });
-      if (ok) toast.success(t('customize.saved') || 'Saved');
+      if (ok) toast.success('Saved');
     } finally {
       setSaving(false);
     }
   };
 
   if (!currentStore) {
-    return <div className="p-6 text-gray-500">{t('customize.noStore') || 'Create a store first to customize theme.'}</div>;
+    return <div className="p-6 text-gray-500">Create a store first to customize theme.</div>;
   }
 
   return (
+    <FeatureGate
+      feature="theme_customization"
+      fallback={
+        <UpgradePrompt
+          title="Upgrade to customize theme"
+          message="Theme customization is not available on your current plan. Upgrade to unlock branding controls."
+        />
+      }
+    >
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t('customize.title') || 'Customize Theme'}</h1>
+        <h1 className="text-2xl font-bold">Customize Theme</h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -83,27 +92,27 @@ export function CustomizePage() {
           <CardContent className="p-6 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-600 mb-1 block">{t('customize.primary') || 'Primary'}</label>
+                <label className="text-sm text-gray-600 mb-1 block">Primary</label>
                 <Input type="color" value={draft?.primaryColor || ''} onChange={e => handleChange('primaryColor', e.target.value)} />
               </div>
               <div>
-                <label className="text-sm text-gray-600 mb-1 block">{t('customize.secondary') || 'Secondary'}</label>
+                <label className="text-sm text-gray-600 mb-1 block">Secondary</label>
                 <Input type="color" value={draft?.secondaryColor || ''} onChange={e => handleChange('secondaryColor', e.target.value)} />
               </div>
               <div>
-                <label className="text-sm text-gray-600 mb-1 block">{t('customize.accent') || 'Accent'}</label>
+                <label className="text-sm text-gray-600 mb-1 block">Accent</label>
                 <Input type="color" value={draft?.accentColor || ''} onChange={e => handleChange('accentColor', e.target.value)} />
               </div>
               <div>
-                <label className="text-sm text-gray-600 mb-1 block">{t('customize.background') || 'Background'}</label>
+                <label className="text-sm text-gray-600 mb-1 block">Background</label>
                 <Input type="color" value={draft?.backgroundColor || ''} onChange={e => handleChange('backgroundColor', e.target.value)} />
               </div>
               <div>
-                <label className="text-sm text-gray-600 mb-1 block">{t('customize.text') || 'Text'}</label>
+                <label className="text-sm text-gray-600 mb-1 block">Text</label>
                 <Input type="color" value={draft?.textColor || ''} onChange={e => handleChange('textColor', e.target.value)} />
               </div>
               <div>
-                <label className="text-sm text-gray-600 mb-1 block">{t('customize.font') || 'Font'}</label>
+                <label className="text-sm text-gray-600 mb-1 block">Font</label>
                 <select
                   className="w-full border rounded px-3 py-2 text-sm"
                   value={draft?.fontFamily || ''}
@@ -115,9 +124,9 @@ export function CustomizePage() {
                 </select>
               </div>
             </div>
-            <div className="pt-2">
-              <Button disabled={saving || isLoading} onClick={handleSave}>
-                {saving ? (t('common.saving') || 'Saving...') : (t('common.save') || 'Save')}
+            <div className="pt-2 ">
+              <Button disabled={saving || isLoading} onClick={handleSave} className='bg-teal-600 text-white hover:bg-teal-700'>
+                {saving ? 'Saving...' : 'Save'}
               </Button>
             </div>
           </CardContent>
@@ -125,17 +134,17 @@ export function CustomizePage() {
 
         <Card>
           <CardContent className="p-6">
-            <div style={previewStyle} className="rounded-lg border" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
+            <div style={previewStyle} className="rounded-lg border" dir="ltr">
               <div className="p-4" style={{ backgroundColor: draft?.backgroundColor, color: draft?.textColor }}>
                 <div className="text-xl font-bold mb-3">{currentStore.name}</div>
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="px-3 py-1 rounded" style={{ backgroundColor: draft?.primaryColor, color: '#fff' }}>{t('customize.primary') || 'Primary'}</span>
-                  <span className="px-3 py-1 rounded" style={{ backgroundColor: draft?.secondaryColor, color: '#fff' }}>{t('customize.secondary') || 'Secondary'}</span>
-                  <span className="px-3 py-1 rounded" style={{ backgroundColor: draft?.accentColor, color: '#fff' }}>{t('customize.accent') || 'Accent'}</span>
+                  <span className="px-3 py-1 rounded" style={{ backgroundColor: draft?.primaryColor, color: '#fff' }}>Primary</span>
+                  <span className="px-3 py-1 rounded" style={{ backgroundColor: draft?.secondaryColor, color: '#fff' }}>Secondary</span>
+                  <span className="px-3 py-1 rounded" style={{ backgroundColor: draft?.accentColor, color: '#fff' }}>Accent</span>
                 </div>
-                <p className="text-sm mb-2">{t('customize.previewText') || 'This is a live preview of your storefront theme.'}</p>
+                <p className="text-sm mb-2">This is a live preview of your storefront theme.</p>
                 <Button style={{ backgroundColor: draft?.primaryColor, borderColor: draft?.primaryColor }}>
-                  {t('customize.sampleButton') || 'Sample Button'}
+                  Sample Button
                 </Button>
               </div>
             </div>
@@ -143,6 +152,7 @@ export function CustomizePage() {
         </Card>
       </div>
     </div>
+    </FeatureGate>
   );
 }
 

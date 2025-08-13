@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../../contexts/StoreProvider';
 import { useCart } from '../../contexts/CartProvider';
@@ -6,20 +6,24 @@ import { Button } from '../../components/ui/button';
 import { supabase } from '../../services/supabase';
 import { formatPrice } from '../../lib/utils';
 import { toast } from 'react-hot-toast';
-import { ShoppingCart, Heart, Share2, CheckCircle, XCircle } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { ShoppingCart, Heart, HeartOff, Share2, CheckCircle, XCircle } from 'lucide-react';
+import { useWishlist } from '../../contexts/WishlistProvider';
 
 export function ProductDetailsPage() {
   const { productId, slug } = useParams();
   const { products, getStoreBySlug, categories, stores } = useStore();
   const { addToCart } = useCart();
-  const { i18n } = useTranslation();
+  const { isWishlisted, toggleWishlist } = useWishlist();
   const [storeId, setStoreId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchedProduct, setFetchedProduct] = useState<any | null>(null);
   const [selectedImgIdx, setSelectedImgIdx] = useState(0);
   const [qty, setQty] = useState(1);
   const [categoryName, setCategoryName] = useState<string>('');
+  // Variants state
+  const [variantOptions, setVariantOptions] = useState<Array<{ id: string; name: string; values: string[]; order: number }>>([]);
+  const [variants, setVariants] = useState<Array<{ id: string; selections: Record<string, string>; price: number | null; stock: number; images?: string[] }>>([]);
+  const [selections, setSelections] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -53,7 +57,7 @@ export function ProductDetailsPage() {
   // Resolve category name from context or Supabase
   useEffect(() => {
     const resolveCategory = async () => {
-      const uncategorized = i18n.language === 'ar' ? 'غير محدد' : 'Uncategorized';
+      const uncategorized = 'Uncategorized';
       if (!product || !product.categoryId) { setCategoryName(uncategorized); return; }
       const fromCtx = categories.find(c => c.id === product.categoryId)?.name;
       if (fromCtx) { setCategoryName(fromCtx); return; }
@@ -67,7 +71,7 @@ export function ProductDetailsPage() {
       setCategoryName(data?.name || uncategorized);
     };
     resolveCategory();
-  }, [product, categories, storeId, i18n.language]);
+  }, [product, categories, storeId]);
 
   // Fetch product from Supabase if not present in context
   useEffect(() => {
@@ -109,6 +113,65 @@ export function ProductDetailsPage() {
     return () => { mounted = false; };
   }, [storeId, productId, products]);
 
+  // Load variant options and variants
+  useEffect(() => {
+    let mounted = true;
+    const loadVariants = async () => {
+      if (!product?.id) return;
+      try {
+        const [voRes, pvRes] = await Promise.all([
+          supabase.from('variant_options').select('id, name, values, order').eq('product_id', product.id).order('order', { ascending: true }),
+          supabase.from('product_variants').select('id, selections, price, stock, images').eq('product_id', product.id)
+        ]);
+        if (!mounted) return;
+        const opts = (voRes.data || []).map((r: any) => ({ id: r.id, name: r.name, values: r.values || [], order: r.order ?? 0 }));
+        const vars = (pvRes.data || []).map((r: any) => ({ id: r.id, selections: r.selections || {}, price: r.price !== null ? Number(r.price) : null, stock: Number(r.stock ?? 0), images: r.images || [] }));
+        setVariantOptions(opts);
+        setVariants(vars);
+        // Initialize selections with nulls
+        const init: Record<string, string | null> = {};
+        opts.forEach(o => { init[o.name] = null; });
+        setSelections(init);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('Error loading variants', e);
+      }
+    };
+    loadVariants();
+    return () => { mounted = false; };
+  }, [product?.id]);
+
+  const onSelectOption = useCallback((optionName: string, value: string) => {
+    setSelections(prev => ({ ...prev, [optionName]: prev[optionName] === value ? null : value }));
+  }, []);
+
+  // Compute selected variant based on selections
+  const selectedVariant = useMemo(() => {
+    if (!variantOptions.length || !variants.length) return null;
+    // Require all options selected to consider a specific variant
+    const allSelected = variantOptions.every(o => !!selections[o.name]);
+    if (!allSelected) return null;
+    const found = variants.find(v => variantOptions.every(o => v.selections?.[o.name] === selections[o.name]));
+    return found || null;
+  }, [variantOptions, variants, selections]);
+
+  // Available values for each option under current partial selections (stock > 0)
+  const availableValues = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    variantOptions.forEach(o => map.set(o.name, new Set<string>()));
+    variants.forEach(v => {
+      if ((v.stock ?? 0) <= 0) return;
+      // check compatibility with current selections for other options
+      const compatible = Object.entries(selections).every(([name, val]) => !val || v.selections?.[name] === val);
+      if (!compatible) return;
+      variantOptions.forEach(o => {
+        const val = v.selections?.[o.name];
+        if (val) map.get(o.name)!.add(val);
+      });
+    });
+    return map;
+  }, [variantOptions, variants, selections]);
+
   if (loading) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
@@ -129,15 +192,17 @@ export function ProductDetailsPage() {
       <div className="p-6 max-w-4xl mx-auto">
         <div className="rounded-2xl border border-slate-200 p-6 text-center">
           <XCircle className="mx-auto mb-3 h-10 w-10 text-slate-400" />
-          <p className="text-slate-600 mb-2">{i18n.language === 'ar' ? 'المنتج غير موجود.' : 'Product not found.'}</p>
-          <Link to={`/store/${slug}`} className="text-teal-600 hover:text-teal-700">{i18n.language === 'ar' ? 'عودة للمتجر' : 'Back to store'}</Link>
+          <p className="text-slate-600 mb-2">Product not found.</p>
+          <Link to={`/store/${slug}`} className="text-teal-600 hover:text-teal-700">Back to store</Link>
         </div>
       </div>
     );
   }
 
-  const catName = categoryName || (i18n.language === 'ar' ? 'غير محدد' : 'Uncategorized');
-  const images = product.images && product.images.length > 0 ? product.images : ['https://placehold.co/800x800'];
+  const catName = categoryName || 'Uncategorized';
+  const images = (selectedVariant?.images && selectedVariant.images.length > 0)
+    ? selectedVariant.images
+    : (product.images && product.images.length > 0 ? product.images : ['https://placehold.co/800x800']);
 
   const shareProduct = async () => {
     try {
@@ -146,7 +211,7 @@ export function ProductDetailsPage() {
         await navigator.share({ title: product.name, text: product.description || product.name, url });
       } else {
         await navigator.clipboard.writeText(url);
-        toast.success(i18n.language === 'ar' ? 'تم نسخ رابط المنتج' : 'Product link copied');
+        toast.success('Product link copied');
       }
     } catch {
       // no-op
@@ -154,17 +219,23 @@ export function ProductDetailsPage() {
   };
 
   const addToCartWithQty = () => {
+    // For now, cart uses base product. In future, include variantId.
+    if (variantOptions.length && variantOptions.every(o => !!selections[o.name]) && selectedVariant && selectedVariant.stock <= 0) {
+      toast.error('Selected variant is out of stock');
+      return;
+    }
     for (let i = 0; i < Math.max(1, Math.min(99, qty)); i++) {
       addToCart(product);
     }
-    toast.success(i18n.language === 'ar' ? 'تمت الإضافة إلى السلة' : 'Added to cart');
+    const suffix = selectedVariant ? ` (${Object.entries(selectedVariant.selections).map(([k,v]) => `${k}: ${v}`).join(', ')})` : '';
+    toast.success(`Added to cart${suffix}`);
   };
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
       {/* Breadcrumbs */}
       <nav className="mb-4 text-sm text-slate-500">
-        <Link to={`/store/${slug}`} className="hover:text-slate-700">{i18n.language === 'ar' ? 'المتجر' : 'Store'}</Link>
+        <Link to={`/store/${slug}`} className="hover:text-slate-700">Store</Link>
         <span className="mx-2">/</span>
         <span className="hover:text-slate-700">{catName}</span>
         <span className="mx-2">/</span>
@@ -175,21 +246,26 @@ export function ProductDetailsPage() {
         {/* Left: Gallery */}
         <div className="md:sticky md:top-24 self-start">
           <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            <img
-              src={images[selectedImgIdx]}
-              alt={product.name}
-              className="w-full aspect-square object-cover"
-            />
+            <div className="relative bg-slate-50 aspect-[4/3]">
+              <img
+                src={images[selectedImgIdx]}
+                alt={product.name}
+                fetchPriority="high"
+                decoding="async"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+            </div>
             {/* Badges */}
             <div className="absolute top-3 left-3 flex gap-2">
               <span className="inline-flex items-center px-2.5 h-7 rounded-full bg-white/90 text-slate-700 text-xs font-medium shadow">{catName}</span>
               {product.isAvailable ? (
                 <span className="inline-flex items-center gap-1 px-2.5 h-7 rounded-full bg-emerald-600 text-white text-xs font-medium shadow">
-                  <CheckCircle className="h-4 w-4" /> {i18n.language === 'ar' ? 'متوفر' : 'Available'}
+                  <CheckCircle className="h-4 w-4" /> Available
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 px-2.5 h-7 rounded-full bg-slate-400 text-white text-xs font-medium shadow">
-                  {i18n.language === 'ar' ? 'غير متوفر' : 'Unavailable'}
+                  Unavailable
                 </span>
               )}
             </div>
@@ -200,11 +276,11 @@ export function ProductDetailsPage() {
               {images.map((img: string, idx: number) => (
                 <button
                   key={idx}
-                  className={`h-16 w-16 flex-shrink-0 rounded-xl border ${idx === selectedImgIdx ? 'border-teal-600 ring-2 ring-teal-200' : 'border-slate-200'} overflow-hidden`}
+                  className={`h-14 w-14 sm:h-16 sm:w-16 flex-shrink-0 rounded-xl border ${idx === selectedImgIdx ? 'border-teal-600 ring-2 ring-teal-200' : 'border-slate-200'} overflow-hidden`}
                   onClick={() => setSelectedImgIdx(idx)}
-                  aria-label={`صورة ${idx + 1}`}
+                  aria-label={`Image ${idx + 1}`}
                 >
-                  <img src={img} alt="thumb" className="h-full w-full object-cover" />
+                  <img src={img} alt="thumb" loading="lazy" decoding="async" className="h-full w-full object-cover object-center" />
                 </button>
               ))}
             </div>
@@ -213,31 +289,59 @@ export function ProductDetailsPage() {
 
         {/* Right: Info */}
         <div className="space-y-4">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">{product.name}</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-slate-900">{product.name}</h1>
           <div className="text-slate-600 whitespace-pre-line leading-relaxed">{product.description}</div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="text-2xl font-bold" style={{ color: (stores?.find((s: any) => s.id === storeId)?.theme?.primaryColor) || '#0f766e' }}>
-              {formatPrice(product.price, currency)}
+              {formatPrice(selectedVariant?.price ?? product.price, currency)}
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" className="h-10" onClick={shareProduct}>
-                <Share2 className="h-4 w-4 mr-2" /> {i18n.language === 'ar' ? 'مشاركة' : 'Share'}
+              <Button variant="outline" className="h-10 w-full sm:w-auto text-sm" onClick={shareProduct}>
+                <Share2 className="h-4 w-4 mr-2" /> Share
               </Button>
-              <Button variant="outline" className="h-10" aria-label={i18n.language === 'ar' ? 'قائمة الرغبات' : 'Wishlist'}>
-                <Heart className="h-4 w-4" />
+              <Button variant="outline" className="h-10 w-full sm:w-auto text-sm" aria-label="Wishlist" onClick={() => product?.id && toggleWishlist(String(product.id))}>
+                {product?.id && isWishlisted(String(product.id)) ? <Heart className="h-4 w-4 text-rose-600" /> : <HeartOff className="h-4 w-4" />}
               </Button>
             </div>
           </div>
 
+          {/* Variants selection */}
+          {variantOptions.length > 0 && (
+            <div className="space-y-3">
+              {variantOptions.map(opt => (
+                <div key={opt.id} className="space-y-2">
+                  <div className="text-sm font-medium text-slate-700">{opt.name}</div>
+                  <div className="flex flex-wrap gap-2">
+                    {(opt.values || []).map(val => {
+                      const isAvailable = availableValues.get(opt.name)?.has(val) ?? false;
+                      const isSelected = selections[opt.name] === val;
+                      return (
+                        <button
+                          key={val}
+                          type="button"
+                          disabled={!isAvailable}
+                          onClick={() => onSelectOption(opt.name, val)}
+                          className={`px-3 h-9 rounded-lg border text-sm transition ${isSelected ? 'border-teal-600 ring-2 ring-teal-200' : 'border-slate-200'} ${isAvailable ? 'bg-white hover:bg-slate-50' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+                        >
+                          {val}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Quantity + Add to cart */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <div className="inline-flex items-center rounded-lg border border-slate-200">
               <button
                 className="px-3 h-10 text-slate-700 disabled:opacity-50"
                 onClick={() => setQty(q => Math.max(1, q - 1))}
                 disabled={qty <= 1}
-                aria-label={i18n.language === 'ar' ? 'تقليل الكمية' : 'Decrease quantity'}
+                aria-label="Decrease quantity"
               >
                 −
               </button>
@@ -245,22 +349,22 @@ export function ProductDetailsPage() {
               <button
                 className="px-3 h-10 text-slate-700"
                 onClick={() => setQty(q => Math.min(99, q + 1))}
-                aria-label={i18n.language === 'ar' ? 'زيادة الكمية' : 'Increase quantity'}
+                aria-label="Increase quantity"
               >
                 +
               </button>
             </div>
-            <Button onClick={addToCartWithQty} className="h-10 text-white" style={{ backgroundColor: (stores?.find((s: any) => s.id === storeId)?.theme?.primaryColor) || '#0f766e' }}>
-              <ShoppingCart className="h-4 w-4 mr-2" /> {i18n.language === 'ar' ? 'أضف إلى السلة' : 'Add to cart'}
+            <Button onClick={addToCartWithQty} disabled={!!variantOptions.length && variantOptions.every(o => !!selections[o.name]) && !!selectedVariant && selectedVariant.stock <= 0} className="h-10 text-white w-full sm:w-auto text-sm disabled:opacity-60" style={{ backgroundColor: (stores?.find((s: any) => s.id === storeId)?.theme?.primaryColor) || '#0f766e' }}>
+              <ShoppingCart className="h-4 w-4 mr-2" /> Add to cart
             </Button>
           </div>
 
           <div className="pt-2 text-sm text-slate-500">
-            {i18n.language === 'ar' ? 'التصنيف:' : 'Category:'} <span className="text-slate-700">{catName}</span>
+            Category: <span className="text-slate-700">{catName}</span>
           </div>
 
           <div>
-            <Link to={`/store/${slug}`} className="text-teal-600 hover:text-teal-700">{i18n.language === 'ar' ? 'العودة للمتجر' : 'Back to store'}</Link>
+            <Link to={`/store/${slug}`} className="text-teal-600 hover:text-teal-700">Back to store</Link>
           </div>
         </div>
       </div>

@@ -21,8 +21,8 @@ export function ForgotPasswordPage() {
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">استعادة كلمة المرور</CardTitle>
-          <p className="text-gray-600 mt-2">أدخل بريدك لإرسال رابط إعادة تعيين كلمة المرور</p>
+          <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
+          <p className="text-gray-600 mt-2">Enter your email to receive a password reset link</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
@@ -38,12 +38,12 @@ export function ForgotPasswordPage() {
               />
             </div>
             <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700 text-white" disabled={isLoading}>
-              {isLoading ? 'جارٍ الإرسال...' : 'إرسال رابط إعادة التعيين'}
+              {isLoading ? 'Sending...' : 'Send reset link'}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="text-center">
-          <Link to="/login" className="text-sm text-teal-600 hover:text-teal-700">عودة إلى تسجيل الدخول</Link>
+          <Link to="/login" className="text-sm text-teal-600 hover:text-teal-700">Back to Login</Link>
         </CardFooter>
       </Card>
     </div>

@@ -1,16 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Outlet, Link, useParams } from 'react-router-dom';
 import { ShoppingCart, Menu, X, MessageCircle } from 'lucide-react';
 import { useStore } from '../../contexts/StoreProvider';
 import type { Store } from '../../types';
 import { useCart } from '../../contexts/CartProvider';
-import { LanguageToggle } from '../LanguageToggle';
 import { Button } from '../ui/button';
 import { generateWhatsAppUrl } from '../../lib/utils';
 
 export function StorefrontLayout() {
-  const { t } = useTranslation();
   const { slug } = useParams<{ slug: string }>();
   const { getStoreBySlug } = useStore();
   const { totalItems } = useCart();
@@ -95,13 +92,13 @@ export function StorefrontLayout() {
                 to={`/store/${slug}`}
                 className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors"
               >
-                {t('storefront.allProducts')}
+                All products
               </Link>
               <Link 
                 to={`/store/${slug}/categories`}
                 className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors"
               >
-                {t('storefront.categories')}
+                Categories
               </Link>
               <a
                 href={whatsappUrl}
@@ -110,13 +107,12 @@ export function StorefrontLayout() {
                 className="flex items-center text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors"
               >
                 <MessageCircle className="h-4 w-4 mr-1" />
-                {t('storefront.contactUs')}
+                Contact us
               </a>
             </nav>
 
             {/* Actions */}
             <div className="flex items-center space-x-4">
-              <LanguageToggle />
               
               {/* Cart */}
               <Link to={`/store/${slug}/cart`} className="relative">
@@ -163,14 +159,14 @@ export function StorefrontLayout() {
                 className="block py-3 text-base font-medium text-gray-900"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                {t('storefront.allProducts')}
+                All products
               </Link>
               <Link
                 to={`/store/${slug}/categories`}
                 className="block py-3 text-base font-medium text-gray-900"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                {t('storefront.categories')}
+                Categories
               </Link>
               <a
                 href={whatsappUrl}
@@ -180,7 +176,7 @@ export function StorefrontLayout() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <MessageCircle className="h-5 w-5 mr-3" />
-                {t('storefront.contactUs')}
+                Contact us
               </a>
             </nav>
           </div>
@@ -212,7 +208,7 @@ export function StorefrontLayout() {
               style={{ backgroundColor: store.theme.primaryColor }}
             >
               <MessageCircle className="h-5 w-5 mr-2" />
-              {t('storefront.contactUs')}
+              Contact us
             </a>
           </div>
         </div>

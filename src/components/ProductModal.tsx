@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { X, Upload, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -7,6 +6,8 @@ import { useStore } from '../contexts/StoreProvider';
 import { Product } from '../types';
 import toast from 'react-hot-toast';
 import { supabase } from '../services/supabase';
+import { getStorePlan, enforceLimit } from '../services/limits';
+import { useNavigate } from 'react-router-dom';
 
 interface ProductModalProps {
   product?: Product | null;
@@ -15,8 +16,8 @@ interface ProductModalProps {
 }
 
 export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
-  const { t } = useTranslation();
   const { categories, addProduct, updateProduct, isLoading, currentStore } = useStore();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -73,6 +74,39 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
       storeId: currentStore.id
     };
 
+    // Enforce plan limits only on create
+    if (!product) {
+      try {
+        const info = await getStorePlan(currentStore.id);
+        const storeProductCount = (await (async () => {
+          // Count products for this store via context
+          // Fallback to DB count if not available in context
+          try {
+            // @ts-ignore access useStore outside? we have products in context
+            // safer: query DB count to be accurate
+            const { count, error } = await supabase
+              .from('products')
+              .select('*', { count: 'exact', head: true })
+              .eq('store_id', currentStore.id);
+            if (error) throw error;
+            return count ?? 0;
+          } catch {
+            return 0;
+          }
+        })());
+        const check = enforceLimit(storeProductCount, info.product_limit);
+        if (!check.allowed) {
+          toast.error(`Product limit reached. Please upgrade your plan to add more products.`);
+          // Offer quick navigation
+          setTimeout(() => navigate('/dashboard/upgrade'), 500);
+          return;
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Plan check failed', err);
+      }
+    }
+
     let success;
     if (product) {
       success = await updateProduct(product.id, productData);
@@ -111,6 +145,36 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
       toast.error('No store selected');
       return null;
     }
+    // Basic size guard: 5MB per file; can be tightened based on plan.storage_mb later
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      toast.error('Image too large. Max 5MB');
+      return null;
+    }
+
+    // Enforce storage_mb if available: estimate current usage by listing folder files
+    try {
+      const info = await getStorePlan(currentStore.id);
+      if (info.storage_mb != null) {
+        let used = 0;
+        // list up to first 100 files; for more comprehensive accounting, paginate
+        const { data: files, error: listErr } = await supabase.storage
+          .from('product-images')
+          .list(currentStore.id, { limit: 100, offset: 0, sortBy: { column: 'name', order: 'asc' } });
+        if (!listErr && Array.isArray(files)) {
+          used = files.reduce((sum: number, f: any) => sum + (typeof f?.size === 'number' ? f.size : 0), 0);
+        }
+        const quota = info.storage_mb * 1024 * 1024;
+        const remaining = Math.max(0, quota - used);
+        if (file.size > remaining) {
+          toast.error('Storage limit reached. Please upgrade your plan.');
+          setTimeout(() => navigate('/dashboard/upgrade'), 500);
+          return null;
+        }
+      }
+    } catch (e) {
+      // ignore storage estimation errors, proceed with upload
+    }
     const ext = file.name.split('.').pop();
     const path = `${currentStore.id}/${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from('product-images').upload(path, file, {
@@ -134,7 +198,7 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
       <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-semibold">
-            {product ? t('products.editProduct') : t('products.addProduct')}
+            {product ? 'Edit product' : 'Add product'}
           </h2>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-5 w-5" />
@@ -145,7 +209,7 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">
-                {t('products.productName')} *
+                Product name *
               </label>
               <Input
                 value={formData.name}
@@ -157,7 +221,7 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">
-                {t('products.price')} *
+                Price *
               </label>
               <Input
                 type="number"
@@ -173,7 +237,7 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">
-              {t('products.category')} *
+              Category *
             </label>
             <select
               value={formData.categoryId}
@@ -191,7 +255,7 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">
-              {t('products.productDescription')} *
+              Product description *
             </label>
             <textarea
               value={formData.description}
@@ -205,7 +269,7 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
 
           <div className="space-y-4">
             <label className="text-sm font-medium text-gray-700">
-              {t('products.images')}
+              Images
             </label>
             {formData.images.map((image, index) => (
               <div key={index} className="flex items-center space-x-2">
@@ -266,20 +330,20 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
               className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
             />
             <label htmlFor="isAvailable" className="text-sm font-medium text-gray-700">
-              {t('products.available')}
+              Available
             </label>
           </div>
 
           <div className="flex items-center justify-end space-x-3 pt-6 border-t">
             <Button type="button" variant="outline" onClick={onClose}>
-              {t('common.cancel')}
+              Cancel
             </Button>
             <Button
               type="submit"
               className="bg-teal-600 hover:bg-teal-700"
               disabled={isLoading}
             >
-              {isLoading ? t('common.loading') : (product ? t('common.save') : t('common.add'))}
+              {isLoading ? 'Loading...' : (product ? 'Save' : 'Add')}
             </Button>
           </div>
         </form>

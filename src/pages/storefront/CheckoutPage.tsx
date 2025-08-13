@@ -2,7 +2,6 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
@@ -12,8 +11,8 @@ import { formatPrice, generateWhatsAppUrl } from '../../lib/utils';
 import toast from 'react-hot-toast';
 
 const checkoutSchema = z.object({
-  name: z.string().min(2, 'الاسم مطلوب'),
-  phone: z.string().min(6, 'رقم الهاتف غير صالح'),
+  name: z.string().min(2, 'Name is required'),
+  phone: z.string().min(6, 'Invalid phone number'),
   notes: z.string().max(500).optional(),
   deliveryMethod: z.enum(['pickup', 'delivery']).optional(),
 });
@@ -21,7 +20,6 @@ const checkoutSchema = z.object({
 type CheckoutForm = z.infer<typeof checkoutSchema>;
 
 export function CheckoutPage() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const { slug } = useParams();
   const { items, totalPrice, clearCart } = useCart();
@@ -41,8 +39,8 @@ export function CheckoutPage() {
   if (items.length === 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('storefront.cartEmpty') || 'Your cart is empty'}</h2>
-        <Button onClick={() => navigate(`/store/${slug}`)}>{t('storefront.continueShopping') || 'Continue Shopping'}</Button>
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">Your cart is empty</h2>
+        <Button onClick={() => navigate(`/store/${slug}`)}>Continue Shopping</Button>
       </div>
     );
   }
@@ -73,7 +71,7 @@ export function CheckoutPage() {
       });
 
       if (!ok) {
-        toast.error(t('storefront.orderFailed') || 'Failed to place order');
+        toast.error('Failed to place order');
         return;
       }
 
@@ -87,32 +85,32 @@ export function CheckoutPage() {
         )
         .join('\n');
 
-      const deliveryMethodLabel = data.deliveryMethod === 'delivery' ? (t('storefront.delivery') || 'توصيل') : (t('storefront.pickup') || 'استلام من المتجر');
+      const deliveryMethodLabel = data.deliveryMethod === 'delivery' ? 'Delivery' : 'Pickup';
       const subtotal = totalPrice;
       const dateStr = new Date().toLocaleString();
 
       // Professional default message
       const professionalDefault = [
-        `مرحباً فريق ${currentStore.name} 👋`,
-        'تم استلام طلب جديد ✅',
-        `رقم الطلب: ${orderNumber}`,
-        `التاريخ: ${dateStr}`,
+        `Hello ${currentStore.name} team 👋`,
+        'A new order has been received ✅',
+        `Order number: ${orderNumber}`,
+        `Date: ${dateStr}`,
         '—',
-        'بيانات العميل:',
-        `• الاسم: ${data.name}`,
-        `• الجوال: ${data.phone}`,
-        `• طريقة الاستلام: ${deliveryMethodLabel}`,
-        data.deliveryMethod === 'delivery' ? `• رسوم التوصيل: ${formatPrice(deliveryFee, currentStore.settings.currency)}` : undefined,
+        'Customer Info:',
+        `• Name: ${data.name}`,
+        `• Phone: ${data.phone}`,
+        `• Method: ${deliveryMethodLabel}`,
+        data.deliveryMethod === 'delivery' ? `• Delivery fee: ${formatPrice(deliveryFee, currentStore.settings.currency)}` : undefined,
         '—',
-        'تفاصيل الطلب:',
+        'Order Details:',
         `${orderDetails}`,
         '—',
-        `المجموع (قبل التوصيل): ${formatPrice(subtotal, currentStore.settings.currency)}`,
-        data.deliveryMethod === 'delivery' ? `رسوم التوصيل: ${formatPrice(deliveryFee, currentStore.settings.currency)}` : undefined,
-        `الإجمالي المستحق: ${formatPrice(total, currentStore.settings.currency)}`,
-        `ملاحظات: ${data.notes || (t('storefront.noNotes') as string) || ''}`,
+        `Subtotal: ${formatPrice(subtotal, currentStore.settings.currency)}`,
+        data.deliveryMethod === 'delivery' ? `Delivery fee: ${formatPrice(deliveryFee, currentStore.settings.currency)}` : undefined,
+        `Total due: ${formatPrice(total, currentStore.settings.currency)}`,
+        `Notes: ${data.notes || 'No notes'}`,
         '—',
-        `رابط المتجر: ${window.location.origin}/store/${slug}`
+        `Store link: ${window.location.origin}/store/${slug}`
       ].filter(Boolean).join('\n');
 
       // If merchant provided a custom template, fill placeholders; else use professional default
@@ -128,7 +126,7 @@ export function CheckoutPage() {
         message = message.replace('{total}', formatPrice(total, currentStore.settings.currency));
         message = message.replace('{customerName}', data.name);
         message = message.replace('{customerPhone}', data.phone);
-        message = message.replace('{notes}', data.notes || (t('storefront.noNotes') as string) || '');
+        message = message.replace('{notes}', data.notes || 'No notes');
         message = message.replace('{storeUrl}', `${window.location.origin}/store/${slug}`);
       } else {
         message = professionalDefault;
@@ -146,55 +144,55 @@ export function CheckoutPage() {
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error(e);
-      toast.error(t('common.unexpectedError') || 'Unexpected error');
+      toast.error('Unexpected error');
     }
   };
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">{t('storefront.checkout') || 'Checkout'}</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-8">Checkout</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>{t('storefront.customerInfo') || 'Customer Information'}</CardTitle>
+              <CardTitle>Customer Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('storefront.customerName') || 'Full Name'}</label>
-                <Input {...register('name')} placeholder={t('storefront.customerNamePH') || 'Enter your full name'} />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <Input {...register('name')} placeholder="Enter your full name" />
                 {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name.message}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('storefront.customerPhone') || 'Phone Number'}</label>
-                <Input {...register('phone')} placeholder={t('storefront.customerPhonePH') || 'Enter your phone number'} />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <Input {...register('phone')} placeholder="Enter your phone number" />
                 {errors.phone && <p className="text-sm text-red-600 mt-1">{errors.phone.message}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('storefront.notes') || 'Notes'}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                 <textarea
                   {...register('notes')}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
-                  placeholder={t('storefront.notesPH') || 'Any special requests or notes...'}
+                  placeholder="Any special requests or notes..."
                 />
                 {errors.notes && <p className="text-sm text-red-600 mt-1">{errors.notes.message}</p>}
               </div>
 
               {currentStore.settings.allowDelivery && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('storefront.deliveryMethod') || 'Delivery Method'}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Method</label>
                   <div className="flex gap-3">
                     <label className="inline-flex items-center gap-2">
                       <input type="radio" value="pickup" {...register('deliveryMethod')} />
-                      <span>{t('storefront.pickup') || 'Pickup'}</span>
+                      <span>Pickup</span>
                     </label>
                     <label className="inline-flex items-center gap-2">
                       <input type="radio" value="delivery" {...register('deliveryMethod')} />
-                      <span>{t('storefront.delivery') || 'Delivery'}</span>
+                      <span>Delivery</span>
                     </label>
                   </div>
                 </div>
@@ -206,7 +204,7 @@ export function CheckoutPage() {
                 style={{ backgroundColor: currentStore.theme.primaryColor }}
                 disabled={!isValid || isLoading}
               >
-                {t('storefront.placeOrder') || 'Place Order'}
+                Place Order
               </Button>
             </CardContent>
           </Card>
@@ -216,7 +214,7 @@ export function CheckoutPage() {
         <div>
           <Card>
             <CardHeader>
-              <CardTitle>{t('storefront.orderSummary') || 'Order Summary'}</CardTitle>
+              <CardTitle>Order Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {items.map((it) => (
@@ -230,17 +228,17 @@ export function CheckoutPage() {
                 </div>
               ))}
               <div className="border-t pt-3 flex justify-between font-semibold">
-                <span>{t('storefront.subtotal') || 'Subtotal'}</span>
+                <span>Subtotal</span>
                 <span>{formatPrice(totalPrice, currentStore.settings.currency)}</span>
               </div>
               {currentStore.settings.allowDelivery && (
                 <div className="flex justify-between">
-                  <span>{t('storefront.deliveryFee') || 'Delivery Fee'}</span>
+                  <span>Delivery Fee</span>
                   <span>{formatPrice(currentStore.settings.deliveryFee, currentStore.settings.currency)}</span>
                 </div>
               )}
               <div className="border-t pt-3 flex justify-between text-lg font-bold">
-                <span>{t('storefront.total') || 'Total'}</span>
+                <span>Total</span>
                 <span>
                   {formatPrice(
                     totalPrice + (currentStore.settings.allowDelivery ? currentStore.settings.deliveryFee : 0),

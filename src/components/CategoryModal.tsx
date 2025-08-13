@@ -27,11 +27,11 @@ export function CategoryModal({ isOpen, onClose }: CategoryModalProps) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!currentStore) {
-      toast.error('لا يوجد متجر محدد');
+      toast.error('No store selected');
       return;
     }
     if (!name.trim()) {
-      toast.error('الاسم مطلوب');
+      toast.error('Name is required');
       return;
     }
     setSaving(true);
@@ -46,13 +46,13 @@ export function CategoryModal({ isOpen, onClose }: CategoryModalProps) {
     } as any);
     setSaving(false);
     if (ok) {
-      toast.success('تمت إضافة التصنيف');
+      toast.success('Category added');
       setName('');
       setDescription('');
       setOrder(prev => prev + 1);
       onClose();
     } else {
-      toast.error('فشلت إضافة التصنيف');
+      toast.error('Failed to add category');
     }
   };
 
@@ -60,31 +60,31 @@ export function CategoryModal({ isOpen, onClose }: CategoryModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle>إضافة تصنيف</CardTitle>
+          <CardTitle>Add Category</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">الاسم</label>
-              <Input value={name} onChange={e => setName(e.target.value)} placeholder="مثال: البرجر" />
+              <label className="block text-sm font-medium mb-1">Name</label>
+              <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Burger" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">الوصف (اختياري)</label>
+              <label className="block text-sm font-medium mb-1">Description (optional)</label>
               <textarea
                 value={description}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
-                placeholder="وصف مختصر للتصنيف"
+                placeholder="Short description for the category"
                 className="w-full min-h-[96px] rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">الترتيب</label>
+              <label className="block text-sm font-medium mb-1">Order</label>
               <Input type="number" value={order} onChange={e => setOrder(parseInt(e.target.value || '0', 10))} />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={onClose} disabled={saving}>إلغاء</Button>
+              <Button type="button" variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
               <Button type="submit" className="bg-teal-600 hover:bg-teal-700" disabled={saving}>
-                {saving ? 'جارٍ الحفظ...' : 'حفظ التصنيف'}
+                {saving ? 'Saving...' : 'Save Category'}
               </Button>
             </div>
           </form>

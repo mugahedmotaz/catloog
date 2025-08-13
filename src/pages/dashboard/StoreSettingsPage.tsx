@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Copy, ExternalLink } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -10,7 +9,6 @@ import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 export function StoreSettingsPage() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentStore, createStore, updateStore, isLoading } = useStore();
@@ -33,16 +31,16 @@ export function StoreSettingsPage() {
 
   const computeErrors = () => {
     const next: typeof errors = {};
-    if (!formData.name.trim()) next.name = 'اسم المتجر مطلوب';
-    if (!formData.whatsappNumber.trim()) next.whatsappNumber = 'رقم الواتساب مطلوب';
-    if (!formData.currency) next.currency = 'العملة مطلوبة';
-    if (!formData.language) next.language = 'اللغة مطلوبة';
+    if (!formData.name.trim()) next.name = 'Store name is required';
+    if (!formData.whatsappNumber.trim()) next.whatsappNumber = 'WhatsApp number is required';
+    if (!formData.currency) next.currency = 'Currency is required';
+    if (!formData.language) next.language = 'Language is required';
     if (formData.allowDelivery) {
       const fee = Number(formData.deliveryFee);
-      if (Number.isNaN(fee) || fee < 0) next.deliveryFee = 'رسوم التوصيل يجب أن تكون رقمًا صالحًا';
+      if (Number.isNaN(fee) || fee < 0) next.deliveryFee = 'Delivery fee must be a valid number';
     }
     const min = Number(formData.minimumOrder);
-    if (Number.isNaN(min) || min < 0) next.minimumOrder = 'الحد الأدنى يجب أن يكون رقمًا صالحًا';
+    if (Number.isNaN(min) || min < 0) next.minimumOrder = 'Minimum order must be a valid number';
     return next;
   };
 
@@ -75,7 +73,7 @@ export function StoreSettingsPage() {
     const eMap = computeErrors();
     setErrors(eMap);
     if (Object.keys(eMap).length > 0) {
-      toast.error('يرجى تصحيح الحقول المطلوبة');
+      toast.error('Please fix the required fields');
       return;
     }
 
@@ -137,7 +135,7 @@ export function StoreSettingsPage() {
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">{t('store.myStore')}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">My Store</h1>
         <p className="text-gray-600 mt-1">Manage your store information and settings</p>
       </div>
 
@@ -150,9 +148,7 @@ export function StoreSettingsPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  {t('store.storeName')} *
-                </label>
+                <label className="text-sm font-medium text-gray-700">Store Name *</label>
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
@@ -163,9 +159,7 @@ export function StoreSettingsPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  {t('store.whatsappNumber')} *
-                </label>
+                <label className="text-sm font-medium text-gray-700">WhatsApp Number *</label>
                 <Input
                   value={formData.whatsappNumber}
                   onChange={(e) => setFormData(prev => ({ ...prev, whatsappNumber: e.target.value }))}
@@ -177,9 +171,7 @@ export function StoreSettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                {t('store.storeDescription')}
-              </label>
+              <label className="text-sm font-medium text-gray-700">Store Description</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
@@ -190,9 +182,7 @@ export function StoreSettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                {t('store.logo')}
-              </label>
+              <label className="text-sm font-medium text-gray-700">Logo</label>
               <Input
                 value={formData.logo}
                 onChange={(e) => setFormData(prev => ({ ...prev, logo: e.target.value }))}
@@ -202,9 +192,7 @@ export function StoreSettingsPage() {
 
             {/* Store URL */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                {t('store.storeUrl')} *
-              </label>
+              <label className="text-sm font-medium text-gray-700">Store URL *</label>
               <div className="flex items-center space-x-2">
                 <Input value={storeUrl || '—'} readOnly className="bg-gray-50" />
                 <Button type="button" variant="outline" onClick={copyStoreUrl} disabled={!storeUrl}>
@@ -308,7 +296,7 @@ export function StoreSettingsPage() {
 
         <div className="flex justify-end">
           <Button type="submit" className="bg-teal-600 text-white hover:bg-teal-700" disabled={!isValid || isLoading}>
-            {isLoading ? t('common.loading') : t('common.save')}
+            {isLoading ? 'Saving...' : 'Save'}
           </Button>
         </div>
 
@@ -345,9 +333,7 @@ export function StoreSettingsPage() {
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
         <div className="relative w-full max-w-2xl">
           <div className="absolute -top-10 right-0">
-            <Button variant="outline" onClick={() => navigate('/dashboard')}>
-              {t('common.close') || 'Close'}
-            </Button>
+            <Button variant="outline" onClick={() => navigate('/dashboard')}>Close</Button>
           </div>
           <div className="bg-white rounded-xl shadow-xl p-6 max-h-[85vh] overflow-y-auto">
             {content}

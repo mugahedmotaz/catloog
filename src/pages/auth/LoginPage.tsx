@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../../components/ui/card';
-import { LanguageToggle } from '../../components/LanguageToggle';
 import { Store, Mail, Lock, LogIn } from 'lucide-react';
 
 export function LoginPage() {
-  const { t } = useTranslation();
   const { login, loginWithGoogle, isLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -27,32 +25,34 @@ export function LoginPage() {
     // Basic inline validation
     const nextErrors: typeof errors = {};
     if (!formData.email) {
-      nextErrors.email = 'الرجاء إدخال البريد الإلكتروني';
+      nextErrors.email = 'Please enter your email';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      nextErrors.email = 'صيغة البريد الإلكتروني غير صحيحة';
+      nextErrors.email = 'Invalid email format';
     }
     if (!formData.password) {
-      nextErrors.password = 'الرجاء إدخال كلمة المرور';
+      nextErrors.password = 'Please enter your password';
     } else if (formData.password.length < 6) {
-      nextErrors.password = 'كلمة المرور يجب ألا تقل عن 6 أحرف';
+      nextErrors.password = 'Password must be at least 6 characters';
     }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
     const success = await login(formData.email, formData.password);
     if (success) {
-      setFormInfo('تم تسجيل الدخول بنجاح، جارٍ تحويلك إلى لوحة التحكم...');
-      navigate('/dashboard');
+      const isAdminContext = location.pathname.startsWith('/admin');
+      setFormInfo(isAdminContext
+        ? 'Signed in successfully. Redirecting to admin...'
+        : 'Signed in successfully. Redirecting to dashboard...'
+      );
+      navigate(isAdminContext ? '/admin/plans' : '/dashboard');
     } else {
-      setFormError('تعذر تسجيل الدخول. تأكد من بيانات الدخول، أو تحقق من تأكيد البريد.');
+      setFormError('Sign in failed. Check your credentials or verify your email.');
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="absolute top-4 right-4">
-        <LanguageToggle />
-      </div>
+      {/* Language toggle removed: English-only UI */}
       
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
@@ -64,9 +64,7 @@ export function LoginPage() {
           <CardTitle className="text-2xl font-bold text-gray-900">
          Catloog
           </CardTitle>
-          <p className="text-gray-600 mt-2">
-            {t('auth.login')} to your merchant account
-          </p>
+          <p className="text-gray-600 mt-2">Sign in to your merchant account</p>
         </CardHeader>
 
         <CardContent>
@@ -82,9 +80,7 @@ export function LoginPage() {
               </div>
             )}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                {t('auth.email')}
-              </label>
+              <label className="text-sm font-medium text-gray-700">Email</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
@@ -100,9 +96,7 @@ export function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                {t('auth.password')}
-              </label>
+              <label className="text-sm font-medium text-gray-700">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
@@ -122,7 +116,7 @@ export function LoginPage() {
               className="w-full bg-teal-600 hover:bg-teal-700 text-white"
               disabled={isLoading}
             >
-              {isLoading ? t('common.loading') : t('auth.signIn')}
+              {isLoading ? 'Loading...' : 'Sign In'}
             </Button>
             <div className="flex items-center gap-3 my-2">
               <div className="h-px bg-gray-200 flex-1" />
@@ -133,7 +127,14 @@ export function LoginPage() {
               type="button"
               variant="outline"
               className="w-full"
-              onClick={loginWithGoogle}
+              onClick={async () => {
+                try {
+                  await loginWithGoogle();
+                } finally {
+                  const isAdminContext = location.pathname.startsWith('/admin');
+                  navigate(isAdminContext ? '/admin/plans' : '/dashboard');
+                }
+              }}
             >
               <LogIn className="h-4 w-4 mr-2" />
               Sign in with Google
@@ -142,20 +143,14 @@ export function LoginPage() {
         </CardContent>
 
         <CardFooter className="flex flex-col space-y-4 text-center">
-          <Link
-            to="/forgot-password"
-            className="text-sm text-teal-600 hover:text-teal-700 transition-colors"
-          >
-            {t('auth.forgotPassword')}
+          <Link to="/forgot-password" className="text-sm text-teal-600 hover:text-teal-700 transition-colors">
+            Forgot your password?
           </Link>
           
           <div className="text-sm text-gray-600">
-            {t('auth.dontHaveAccount')}{' '}
-            <Link
-              to="/register"
-              className="text-teal-600 hover:text-teal-700 font-medium transition-colors"
-            >
-              {t('auth.signUp')}
+            Don't have an account?{' '}
+            <Link to="/register" className="text-teal-600 hover:text-teal-700 font-medium transition-colors">
+              Sign Up
             </Link>
           </div>
         </CardFooter>
