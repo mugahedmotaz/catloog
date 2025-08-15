@@ -5,20 +5,18 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   // eslint-disable-next-line no-console
-  console.warn('[Supabase] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Please set them in your .env file.');
+  console.warn('[SupabaseAdmin] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY.');
 }
 
-// Ensure a single client instance across HMR to avoid multiple GoTrueClient warnings
-const createUserClient = () =>
+const createAdminClient = () =>
   createClient(supabaseUrl || '', supabaseAnonKey || '', {
     auth: {
-      storageKey: 'sb-catloog-auth',
+      storageKey: 'sb-catloog-admin-auth',
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
     },
   });
 
-// Reuse the same instance on the window/globalThis during development HMR
 const g = globalThis as any;
-export const supabase = (g.__sb_user_client ||= createUserClient());
+export const supabaseAdmin = (g.__sb_admin_client ||= createAdminClient());

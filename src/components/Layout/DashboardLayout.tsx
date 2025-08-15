@@ -20,6 +20,7 @@ import { getDisplayName } from '../../lib/auth';
 import { useStore } from '../../contexts/StoreProvider';
 import toast from 'react-hot-toast';
 import { getActiveSubscription, cancelSubscriptionById, type Subscription } from '../../services/subscriptions';
+import Logo from '../../components/Logo';
 
 const sidebarItems = [
   { key: 'overview', icon: LayoutDashboard, path: '/dashboard' },
@@ -134,7 +135,9 @@ export function DashboardLayout() {
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0 transition-transform duration-300 ease-in-out lg:static lg:block`}>
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-          <h1 className="text-xl font-bold text-gray-900">Catloog</h1>
+          <div className="flex items-center gap-2">
+            <Logo responsive preset="lg" rounded="xl" alt="Catloog" />
+          </div>
           <Button
             variant="ghost"
             size="sm"

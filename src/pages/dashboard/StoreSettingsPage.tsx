@@ -11,7 +11,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 export function StoreSettingsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { currentStore, createStore, updateStore, isLoading } = useStore();
+  const { currentStore, createStore, updateStore, deleteStore, softDeleteStore, restoreStore, products, orders, isLoading } = useStore();
   const [formData, setFormData] = useState({
     name: currentStore?.name || '',
     description: currentStore?.description || '',
@@ -50,6 +50,10 @@ export function StoreSettingsPage() {
   }, [formData]);
 
   const isValid = Object.keys(errors).length === 0;
+
+  // Danger Zone state
+  const [confirmName, setConfirmName] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   // Sync form with currentStore when it loads/changes
   useEffect(() => {
@@ -131,6 +135,38 @@ export function StoreSettingsPage() {
     toast.success('Store URL copied to clipboard');
   };
 
+  const exportCsv = (filename: string, header: string[], rows: (string | number | null | undefined)[][]) => {
+    const escape = (v: any) => {
+      const s = v === null || typeof v === 'undefined' ? '' : String(v);
+      if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    };
+    const csv = [header.join(','), ...rows.map(r => r.map(escape).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportProducts = () => {
+    if (!currentStore) return;
+    const list = (products || []).filter(p => p.storeId === currentStore.id);
+    const header = ['id','name','description','price','isAvailable','categoryId','images'];
+    const rows = list.map(p => [p.id, p.name, p.description || '', p.price, p.isAvailable, p.categoryId || '', JSON.stringify(p.images || [])]);
+    exportCsv(`store_${currentStore.slug || currentStore.id}_products.csv`, header, rows);
+  };
+
+  const handleExportOrders = () => {
+    if (!currentStore) return;
+    const list = (orders || []).filter(o => o.storeId === currentStore.id);
+    const header = ['id','orderNumber','total','status','customerName','customerPhone','notes','items'];
+    const rows = list.map(o => [o.id, o.orderNumber, o.total, o.status, o.customerName, o.customerPhone, o.notes || '', JSON.stringify(o.items || [])]);
+    exportCsv(`store_${currentStore.slug || currentStore.id}_orders.csv`, header, rows);
+  };
+
   const content = (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
@@ -205,6 +241,65 @@ export function StoreSettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Store Status (Soft Delete / Restore) and Data Export */}
+        {currentStore && (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle>Store Status</CardTitle>
+              </CardHeader>
+              <CardContent className="flex items-center justify-between gap-3">
+                <div className="text-sm text-gray-700">
+                  Status: {currentStore.isActive ? <span className="text-green-600 font-medium">Active</span> : <span className="text-amber-600 font-medium">Inactive</span>}
+                </div>
+                <div className="flex gap-2">
+                  {currentStore.isActive ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                      disabled={isLoading}
+                      onClick={async () => {
+                        const ok = await softDeleteStore(currentStore.id);
+                        if (ok) toast.success('Store deactivated');
+                      }}
+                    >
+                      Deactivate Store
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-green-300 text-green-700 hover:bg-green-50"
+                      disabled={isLoading}
+                      onClick={async () => {
+                        const ok = await restoreStore(currentStore.id);
+                        if (ok) toast.success('Store reactivated');
+                      }}
+                    >
+                      Reactivate Store
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Data Export</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-wrap items-center gap-3">
+                <Button type="button" variant="outline" onClick={handleExportProducts}>
+                  Export Products CSV
+                </Button>
+                <Button type="button" variant="outline" onClick={handleExportOrders}>
+                  Export Orders CSV
+                </Button>
+              </CardContent>
+            </Card>
+          </>
+        )}
 
         {/* Store Settings */}
         <Card>
@@ -323,6 +418,53 @@ export function StoreSettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Danger Zone */}
+        {currentStore && (
+          <Card className="border-red-200">
+            <CardHeader>
+              <CardTitle className="text-red-600">Danger Zone</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-700">
+                Permanently delete this store and all of its data (products, categories, orders). This action cannot be undone.
+              </p>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Type the store name to confirm
+                </label>
+                <Input
+                  value={confirmName}
+                  onChange={(e) => setConfirmName(e.target.value)}
+                  placeholder={currentStore.name}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                    disabled={deleting || isLoading || confirmName.trim() !== (currentStore.name || '').trim()}
+                    onClick={async () => {
+                      if (!currentStore?.id) return;
+                      if (confirmName.trim() !== (currentStore.name || '').trim()) {
+                        toast.error('Please type the exact store name to confirm');
+                        return;
+                      }
+                      setDeleting(true);
+                      const ok = await deleteStore(currentStore.id);
+                      setDeleting(false);
+                      if (ok) {
+                        setConfirmName('');
+                        navigate('/dashboard');
+                      }
+                    }}
+                  >
+                    {deleting ? 'Deleting...' : 'Delete Store Permanently'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </form>
     </div>
   );

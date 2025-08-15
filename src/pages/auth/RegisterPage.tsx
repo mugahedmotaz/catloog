@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../../components/ui/card';
-import { Store, Mail, Lock, User } from 'lucide-react';
+import { Card, CardHeader, CardContent, CardFooter } from '../../components/ui/card';
+import { Mail, Lock, User } from 'lucide-react';
+import Logo from '../../components/Logo';
 import toast from 'react-hot-toast';
 
 export function RegisterPage() {
-  const { signup, isLoading } = useAuth();
+  const { signup, isLoading, user } = useAuth();
   const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -17,9 +20,21 @@ export function RegisterPage() {
     confirmPassword: ''
   });
 
+  useEffect(() => {
+    if (user) {
+      toast.success('You are already signed in');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (user) {
+      // Safety: do not allow registering while authenticated
+      toast.error('You are already signed in. Please sign out to create a new account.');
+      return;
+    }
+
     if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
       toast.error('Please fill in all fields');
       return;
@@ -40,6 +55,7 @@ export function RegisterPage() {
       toast.success('Account created. Please check your email to confirm, then sign in.');
       navigate('/login');
     } else {
+      // `signup` handles detailed errors; keep a fallback here only
       toast.error('Registration failed. Please try again.');
     }
   };
@@ -50,14 +66,9 @@ export function RegisterPage() {
       
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center mb-4">
-            <div className="bg-teal-100 p-3 rounded-full">
-              <Store className="h-8 w-8 text-teal-600" />
-            </div>
+          <div className="flex items-center justify-center mb-3">
+            <Logo responsive preset="xl" rounded="lg" alt="Catloog" />
           </div>
-          <CardTitle className="text-2xl font-bold text-gray-900">
-            Catloog
-          </CardTitle>
           <p className="text-gray-600 mt-2">
             Create your merchant account
           </p>

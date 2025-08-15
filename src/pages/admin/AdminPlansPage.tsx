@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '../../services/supabase';
-import { useIsAdmin } from '../../hooks/useIsAdmin';
+import { supabaseAdmin } from '../../services/supabaseAdmin';
+import { useAdminIsAdmin } from '../../hooks/useAdminIsAdmin';
 import type { Plan } from '../../types';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import toast from 'react-hot-toast';
 
 export function AdminPlansPage() {
-  const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const { isAdmin, loading: adminLoading } = useAdminIsAdmin();
   const [loading, setLoading] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -33,7 +33,7 @@ export function AdminPlansPage() {
       if (!isAdmin) return;
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
           .from('plans')
           .select('id,name,description,price_monthly,price_yearly,currency,product_limit,variant_limit,storage_mb,features,is_active,created_at,updated_at')
           .order('created_at', { ascending: false });
@@ -106,7 +106,7 @@ export function AdminPlansPage() {
               if (toInsert.length === 0) {
                 toast('All default plans already exist');
               } else {
-                const { data, error } = await supabase.from('plans').insert(toInsert).select('*');
+                const { data, error } = await supabaseAdmin.from('plans').insert(toInsert).select('*');
                 if (error) throw error;
                 const mapped = (data || []).map((r: any) => ({
                   id: r.id,
@@ -196,7 +196,7 @@ export function AdminPlansPage() {
                       }}>Edit</Button>
                       <Button variant="ghost" onClick={async () => {
                         const nextActive = !p.isActive;
-                        const { error } = await supabase.from('plans').update({ is_active: nextActive }).eq('id', p.id);
+                        const { error } = await supabaseAdmin.from('plans').update({ is_active: nextActive }).eq('id', p.id);
                         if (!error) {
                           setPlans((prev) => prev.map(x => x.id === p.id ? { ...x, isActive: nextActive } : x));
                           toast.success(nextActive ? 'Plan enabled' : 'Plan disabled');
@@ -208,7 +208,7 @@ export function AdminPlansPage() {
                         if (!confirm('Delete this plan? This cannot be undone.')) return;
                         try {
                           setDeletingId(p.id);
-                          const { error } = await supabase.from('plans').delete().eq('id', p.id);
+                          const { error } = await supabaseAdmin.from('plans').delete().eq('id', p.id);
                           if (error) throw error;
                           setPlans(prev => prev.filter(x => x.id !== p.id));
                           toast.success('Plan deleted');

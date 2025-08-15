@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Shield, Building2, LogOut, Menu, X, Receipt } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
+import { useAdminAuth } from '../../contexts/AdminAuthProvider';
 import { Button } from '../ui/button';
+import Logo from '../../components/Logo';
 import { getDisplayName } from '../../lib/auth';
  
 
 export function AdminLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout } = useAdminAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -31,7 +32,10 @@ export function AdminLayout() {
         } lg:translate-x-0 transition-transform duration-300 ease-in-out lg:static lg:block`}
       >
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-          <h1 className="text-xl font-bold text-gray-900">Catloog Admin</h1>
+          <div className="flex items-center gap-2">
+            <Logo responsive preset="lg" rounded="xl" alt="Catloog" />
+            <h1 className="text-xl font-bold text-gray-900">Admin</h1>
+          </div>
           <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="h-5 w-5" />
           </Button>

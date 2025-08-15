@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../services/supabase';
 import { Check, Shield, Zap, LineChart, Sparkles, ArrowRight, Globe, Mail, Github } from 'lucide-react';
+import Logo from '../../components/Logo';
 
 export default function LandingPage() {
   // English-only landing page
@@ -52,8 +53,7 @@ export default function LandingPage() {
         <div className="app-container">
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-xl bg-teal-600 flex items-center justify-center text-white font-bold">C</div>
-              <span className="text-lg font-semibold tracking-tight">Catloog</span>
+              <Logo responsive preset="lg" rounded="xl" alt="Catloog" />
             </Link>
             <nav className="hidden md:flex items-center gap-8 text-sm">
               <a href="#features" className="hover:text-slate-900 text-slate-600 transition">Features</a>
@@ -83,7 +83,7 @@ export default function LandingPage() {
                 <Sparkles className="h-3.5 w-3.5" /> New: Modern dashboard UI
               </div>
               <h1 className="mt-4 text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
-                Build your store’s catalog and storefront in minutes
+                Build your store’s catloog and storefront in minutes
               </h1>
               <p className="mt-4 text-slate-600 text-lg">
                 Catloog helps you manage products, orders, and a beautiful storefront powered by Supabase & React.
@@ -112,7 +112,7 @@ export default function LandingPage() {
             {/* Visual */}
             <div className="relative">
               <div className="relative rounded-2xl border border-slate-200 bg-white shadow-xl/30 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.25)] overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1545239351-1141bd82e8a6?q=80&w=1600&auto=format&fit=crop" alt="Showcase" className="w-full h-80 object-cover" />
+                <img src="https://plus.unsplash.com/premium_photo-1681488262364-8aeb1b6aac56?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8ZWNvbW1lcmNlfGVufDB8fDB8fHww" alt="Showcase" className="w-full h-80 object-cover" />
               </div>
               <div className="absolute -bottom-6 -end-6 hidden md:block w-40 h-40 rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 opacity-20 blur-2xl" />
             </div>
@@ -255,8 +255,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-8 text-sm">
             <div>
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold">C</div>
-                <span className="text-base font-semibold tracking-tight">Catloog</span>
+                <Logo responsive preset="lg" rounded="xl" alt="Catloog" />
               </div>
               <p className="mt-3 text-slate-600">A simple platform to manage your online store.</p>
               <div className="mt-4 flex items-center gap-3 text-slate-600">

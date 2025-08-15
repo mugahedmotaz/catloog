@@ -71,20 +71,34 @@ export function useAuthProvider() {
   const signup = async (email: string, password: string, name: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
+      const normalizedEmail = (email || '').trim().toLowerCase();
+      const { data, error } = await supabase.auth.signUp({
+        email: normalizedEmail,
         password,
         options: {
           data: { name, role: 'merchant' },
           emailRedirectTo: `${window.location.origin}/login`,
         },
       });
-      if (error) throw error;
-      // Require email confirmation: do not auto-login.
-      // Show guidance and let the Register page redirect to /login if desired.
-      toast.success('Account created. Please check your email to confirm your account.');
+      if (error) {
+        // Duplicate email detection (confirmed accounts typically return 400)
+        const raw = String(error?.message || '').toLowerCase();
+        if (error.status === 400 || raw.includes('already registered') || raw.includes('user already') || raw.includes('exists') || raw.includes('duplicate')) {
+          toast.error('This email is already registered. Please sign in or reset your password.');
+          return false;
+        }
+        throw error;
+      }
+      // Supabase quirk: if the email already exists, `signUp` may return success with empty identities
+      // In that case, treat it as duplicate and do not proceed as a fresh registration
+      const identitiesLen = (data as any)?.user?.identities?.length ?? null;
+      if (identitiesLen === 0) {
+        toast.error('This email is already registered. Please sign in or reset your password.');
+        return false;
+      }
+      // Success path: allow caller to show success toast; avoid double toasts here.
       return true;
-    } catch (error) {
+    } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Signup error:', error);
       toast.error('Could not create account. Please try again later.');

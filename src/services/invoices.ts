@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
 const RECEIPTS_BUCKET = (import.meta as any).env?.VITE_SUPABASE_RECEIPTS_BUCKET || 'receipts';
 
 export type InvoiceStatus = 'pending_receipt' | 'under_review' | 'approved' | 'rejected';
@@ -27,7 +28,7 @@ export interface InvoiceWithRelations extends Omit<InvoiceRecord, 'status'> { //
   }> | null;
 }
 
-export async function createInvoice(params: { storeId: string; planId: string; period: 'monthly'|'yearly'; amount: number; currency: string }): Promise<InvoiceRecord> {
+export async function createInvoice(params: { storeId: string; planId: string; period: 'monthly'|'yearly'; amount: number; currency: string }, client: SupabaseClient = supabase): Promise<InvoiceRecord> {
   const payload = {
     store_id: params.storeId,
     plan_id: params.planId,
@@ -36,25 +37,25 @@ export async function createInvoice(params: { storeId: string; planId: string; p
     currency: params.currency,
     status: 'pending_receipt' as InvoiceStatus,
   };
-  const { data, error } = await supabase.from('invoices').insert(payload).select('*').single();
+  const { data, error } = await client.from('invoices').insert(payload).select('*').single();
   if (error) throw error;
   return data as InvoiceRecord;
 }
 
-export async function uploadReceipt(invoiceId: string, storeId: string, file: File): Promise<string> {
+export async function uploadReceipt(invoiceId: string, storeId: string, file: File, client: SupabaseClient = supabase): Promise<string> {
   const path = `${storeId}/${invoiceId}-${Date.now()}-${file.name}`;
-  const { data, error } = await supabase.storage.from(RECEIPTS_BUCKET).upload(path, file, { upsert: false });
+  const { data, error } = await client.storage.from(RECEIPTS_BUCKET).upload(path, file, { upsert: false });
   if (error) throw error;
-  const pub = await supabase.storage.from(RECEIPTS_BUCKET).getPublicUrl(data.path);
+  const pub = await client.storage.from(RECEIPTS_BUCKET).getPublicUrl(data.path);
   const url = pub.data.publicUrl;
-  const { error: updErr } = await supabase.from('invoices').update({ receipt_url: url, status: 'under_review' }).eq('id', invoiceId);
+  const { error: updErr } = await client.from('invoices').update({ receipt_url: url, status: 'under_review' }).eq('id', invoiceId);
   if (updErr) throw updErr;
   return url;
 }
 
-export async function listPendingInvoices(): Promise<InvoiceWithRelations[]> {
+export async function listPendingInvoices(client: SupabaseClient = supabase): Promise<InvoiceWithRelations[]> {
   // Attempt to fetch related store/plan names and payment reference details
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('invoices')
     .select(`
       id, store_id, plan_id, period, amount, currency, receipt_url, created_at,
@@ -68,10 +69,10 @@ export async function listPendingInvoices(): Promise<InvoiceWithRelations[]> {
   return (data || []) as InvoiceWithRelations[];
 }
 
-export async function setInvoiceStatus(id: string, status: InvoiceStatus, reason?: string) {
+export async function setInvoiceStatus(client: SupabaseClient, id: string, status: InvoiceStatus, reason?: string): Promise<void> {
   const payload: any = { status };
   if (reason) payload.reason = reason;
-  const { error } = await supabase.from('invoices').update(payload).eq('id', id);
+  const { error } = await client.from('invoices').update(payload).eq('id', id);
   if (error) throw error;
 }
 
@@ -84,7 +85,7 @@ export async function submitPaymentReference(params: {
   amount?: number; // optional override
   payerName?: string;
   note?: string;
-}): Promise<void> {
+}, client: SupabaseClient = supabase): Promise<void> {
   // 1) Insert a row into a lightweight table to track references
   // Expected table (create via SQL): invoice_payments
   // columns: id, invoice_id, store_id, reference_code, paid_at, amount, payer_name, note, created_at
@@ -97,11 +98,11 @@ export async function submitPaymentReference(params: {
     payer_name: params.payerName ?? null,
     note: params.note ?? null,
   };
-  const { error: insErr } = await supabase.from('invoice_payments').insert(insertPayload);
+  const { error: insErr } = await client.from('invoice_payments').insert(insertPayload);
   if (insErr) throw insErr;
 
   // 2) Move invoice to under_review for admin approval
-  const { error: updErr } = await supabase
+  const { error: updErr } = await client
     .from('invoices')
     .update({ status: 'under_review' as InvoiceStatus })
     .eq('id', params.invoiceId);

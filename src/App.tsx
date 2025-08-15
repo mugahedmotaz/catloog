@@ -3,12 +3,15 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider } from './contexts/AuthProvider';
+import { AdminAuthProvider } from './contexts/AdminAuthProvider';
 import { StoreProvider } from './contexts/StoreProvider';
 import { CartProvider } from './contexts/CartProvider';
 import { WishlistProvider } from './contexts/WishlistProvider';
 
 import { useAuth } from './hooks/useAuth';
-import { useIsAdmin } from './hooks/useIsAdmin';
+// import { useIsAdmin } from './hooks/useIsAdmin'; // no longer used for admin area
+import { useAdminIsAdmin } from './hooks/useAdminIsAdmin';
+import { useAdminAuth } from './contexts/AdminAuthProvider';
 
 // Layouts
 import { DashboardLayout } from './components/Layout/DashboardLayout';
@@ -68,9 +71,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const { isAdmin, loading } = useIsAdmin();
+  // Admin-scoped guard using admin auth context
+  const { user } = useAdminAuth();
+  const { isAdmin, loading } = useAdminIsAdmin();
   const ADMIN_EMAIL = (import.meta as any).env?.VITE_ADMIN_EMAIL as string | undefined;
+  const ADMIN_DOMAIN = (import.meta as any).env?.VITE_ADMIN_DOMAIN as string | undefined;
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -82,11 +87,12 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
     );
   }
   const emailOk = ADMIN_EMAIL ? (user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) : true;
-  return (isAdmin && emailOk) ? <>{children}</> : <Navigate to="/admin/login" />;
+  const domainOk = ADMIN_DOMAIN ? (user?.email?.split('@')[1]?.toLowerCase() === ADMIN_DOMAIN.toLowerCase()) : true;
+  return (isAdmin && emailOk && domainOk) ? <>{children}</> : <Navigate to="/admin/login" />;
 }
 
 function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading } = useAdminAuth();
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -112,7 +118,11 @@ function AppContent() {
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           {/* Admin Auth */}
-          <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route path="/admin/login" element={
+            <AdminAuthProvider>
+              <AdminLoginPage />
+            </AdminAuthProvider>
+          } />
 
           {/* Protected Dashboard Routes */}
           <Route path="/dashboard" element={
@@ -136,9 +146,11 @@ function AppContent() {
 
           {/* Dedicated Admin area */}
           <Route path="/admin" element={
-            <AdminProtectedRoute>
-              <AdminLayout />
-            </AdminProtectedRoute>
+            <AdminAuthProvider>
+              <AdminProtectedRoute>
+                <AdminLayout />
+              </AdminProtectedRoute>
+            </AdminAuthProvider>
           }>
             <Route index element={<Navigate to="/admin/plans" replace />} />
             <Route path="plans" element={
@@ -183,11 +195,15 @@ function AppContent() {
 
         <Toaster
           position="top-right"
+          gutter={8}
+          containerStyle={{ top: 12, right: 12 }}
           toastOptions={{
-            duration: 4000,
+            duration: 2000,
             style: {
               background: '#363636',
               color: '#fff',
+              borderRadius: '10px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
             },
             success: {
               style: {

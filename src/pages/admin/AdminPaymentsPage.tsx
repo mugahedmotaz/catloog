@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
-import { useIsAdmin } from '../../hooks/useIsAdmin';
+import { useAdminIsAdmin } from '../../hooks/useAdminIsAdmin';
 import { listPendingInvoices, setInvoiceStatus, type InvoiceWithRelations } from '../../services/invoices';
-import { supabase } from '../../services/supabase';
+import { supabaseAdmin } from '../../services/supabaseAdmin';
 import { Button } from '../../components/ui/button';
 import toast from 'react-hot-toast';
 
 type PendingItem = InvoiceWithRelations;
 
 export default function AdminPaymentsPage() {
-  const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const { isAdmin, loading: adminLoading } = useAdminIsAdmin();
   const [items, setItems] = useState<PendingItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<'pending' | 'subscriptions'>('pending');
@@ -41,7 +41,7 @@ export default function AdminPaymentsPage() {
   async function refresh() {
     setLoading(true);
     try {
-      const data = await listPendingInvoices();
+      const data = await listPendingInvoices(supabaseAdmin);
       setItems(data as any);
     } catch (e) {
       console.error(e);
@@ -56,7 +56,7 @@ export default function AdminPaymentsPage() {
   async function refreshSubs() {
     setLoadingSubs(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('subscriptions')
         .select('id,store_id,plan_id,period,starts_at,ends_at,is_active,created_at,stores(name,slug),plans(name)')
         .eq('is_active', true)
@@ -157,9 +157,9 @@ export default function AdminPaymentsPage() {
         ends_at: ends.toISOString(),
         is_active: true,
       };
-      const { error: subErr } = await supabase.from('subscriptions').insert(subPayload);
+      const { error: subErr } = await supabaseAdmin.from('subscriptions').insert(subPayload);
       if (subErr) throw subErr;
-      await setInvoiceStatus(item.id, 'approved');
+      await setInvoiceStatus(supabaseAdmin, item.id, 'approved');
       toast.success('Approved and subscription activated');
       await refresh();
     } catch (e) {
@@ -171,7 +171,7 @@ export default function AdminPaymentsPage() {
   async function reject(item: PendingItem) {
     try {
       const reason = window.prompt('Enter rejection reason (optional):', '');
-      await setInvoiceStatus(item.id, 'rejected', reason || undefined);
+      await setInvoiceStatus(supabaseAdmin, item.id, 'rejected', reason || undefined);
       toast.success('Rejected');
       await refresh();
     } catch (e) {
@@ -405,7 +405,7 @@ export default function AdminPaymentsPage() {
                           onClick={async () => {
                             try {
                               const nowIso = new Date().toISOString();
-                              const { error } = await supabase
+                              const { error } = await supabaseAdmin
                                 .from('subscriptions')
                                 .update({ is_active: false, ends_at: nowIso })
                                 .eq('id', s.id);

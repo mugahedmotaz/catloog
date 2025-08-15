@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../services/supabase';
-import { useIsAdmin } from '../../hooks/useIsAdmin';
+import { supabaseAdmin } from '../../services/supabaseAdmin';
+import { useAdminIsAdmin } from '../../hooks/useAdminIsAdmin';
 import type { Store, Subscription, Plan } from '../../types';
 import { Button } from '../../components/ui/button';
 
@@ -9,7 +9,7 @@ interface StoreWithSub extends Store {
 }
 
 export function AdminStoresPage() {
-  const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const { isAdmin, loading: adminLoading } = useAdminIsAdmin();
   const [loading, setLoading] = useState(false);
   const [stores, setStores] = useState<StoreWithSub[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -21,8 +21,8 @@ export function AdminStoresPage() {
       setLoading(true);
       try {
         const [{ data: storesData, error: sErr }, { data: plansData, error: pErr }] = await Promise.all([
-          supabase.from('stores').select('id,name,slug,logo,description,whatsapp_number,merchant_id,theme,settings,is_active,created_at,updated_at').order('created_at', { ascending: false }),
-          supabase.from('plans').select('id,name,price_monthly,price_yearly,currency,is_active')
+          supabaseAdmin.from('stores').select('id,name,slug,logo,description,whatsapp_number,merchant_id,theme,settings,is_active,created_at,updated_at').order('created_at', { ascending: false }),
+          supabaseAdmin.from('plans').select('id,name,price_monthly,price_yearly,currency,is_active')
         ]);
         if (sErr) throw sErr;
         if (pErr) throw pErr;
@@ -45,13 +45,13 @@ export function AdminStoresPage() {
 
         // fetch subscriptions for these stores
         const storeIds = mappedStores.map(s => s.id);
-        const { data: subsData, error: subErr } = await supabase
+        const { data: subsData, error: subErr } = await supabaseAdmin
           .from('subscriptions')
           .select('id,store_id,plan_id,period,starts_at,ends_at,is_active,created_at,updated_at')
           .in('store_id', storeIds);
         if (subErr) throw subErr;
 
-        const subs = (subsData || []).reduce<Record<string, Subscription>>((acc, r: any) => {
+        const subs = ((subsData as any[]) || []).reduce<Record<string, Subscription>>((acc: Record<string, Subscription>, r: any) => {
           const sub: Subscription = {
             id: r.id,
             storeId: r.store_id,
@@ -161,7 +161,7 @@ export function AdminStoresPage() {
                             starts_at: new Date().toISOString(),
                             is_active: true,
                           };
-                          const { error } = await supabase.from('subscriptions').insert(payload);
+                          const { error } = await supabaseAdmin.from('subscriptions').insert(payload);
                           if (!error) {
                             // refresh minimal
                             const plan = plans.find(p => p.id === newPlanId);

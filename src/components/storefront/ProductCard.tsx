@@ -12,17 +12,40 @@ interface Props {
   storeSlug: string;
   currency: string;
   primaryColor: string;
+  cardVariant?: 'minimal' | 'bordered' | 'shadow';
+  cornerRadius?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  buttonRoundness?: 'sm' | 'md' | 'lg' | 'full';
+  useRoundedImages?: boolean;
   onAddToCart: (product: Product) => void;
 }
 
-function ProductCardBase({ product, categoryName, storeSlug, currency, primaryColor, onAddToCart }: Props) {
+function ProductCardBase({ product, categoryName, storeSlug, currency, primaryColor, onAddToCart, cardVariant = 'bordered', cornerRadius = 'xl', buttonRoundness = 'md', useRoundedImages = false }: Props) {
   const { isWishlisted, toggleWishlist } = useWishlist();
   const wished = isWishlisted(product.id);
+  const radiusMap: Record<NonNullable<Props['cornerRadius']>, string> = {
+    none: 'rounded-none',
+    sm: 'rounded-sm',
+    md: 'rounded-md',
+    lg: 'rounded-lg',
+    xl: 'rounded-xl',
+    full: 'rounded-full',
+  };
+  const btnRadiusMap: Record<NonNullable<Props['buttonRoundness']>, string> = {
+    sm: 'rounded',
+    md: 'rounded-lg',
+    lg: 'rounded-xl',
+    full: 'rounded-full',
+  };
+  const cardBase = 'group relative overflow-hidden bg-white transition-all focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-teal-500';
+  const cardVariantClass =
+    cardVariant === 'minimal'
+      ? `border border-slate-100 shadow-none hover:-translate-y-0.5`
+      : cardVariant === 'bordered'
+      ? `border border-slate-100 shadow-sm hover:-translate-y-0.5 hover:shadow-lg`
+      : `border border-transparent shadow-md hover:-translate-y-0.5 hover:shadow-lg`;
+  const cardClassName = `${cardBase} ${cardVariantClass} ${radiusMap[cornerRadius]}`;
   return (
-    <Card
-      className="group relative overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
-      style={{ willChange: 'transform' }}
-    >
+    <Card className={cardClassName} style={{ willChange: 'transform' }}>
       <div className="aspect-[4/3] relative overflow-hidden bg-slate-50">
         <img
           src={product.images?.[0] || 'https://placehold.co/800x600'}
@@ -30,14 +53,12 @@ function ProductCardBase({ product, categoryName, storeSlug, currency, primaryCo
           loading="lazy"
           decoding="async"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          className="w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
+          className={`w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105 ${useRoundedImages ? radiusMap[cornerRadius] : ''}`}
         />
         {/* Category badge */}
         {categoryName && (
           <div className="absolute top-3 left-3">
-            <span className="inline-flex items-center px-2.5 h-6 rounded-full bg-white/90 text-slate-700 text-xs font-medium shadow-sm">
-              {categoryName}
-            </span>
+            <span className="inline-flex items-center px-2.5 h-6 rounded-full bg-white/90 text-slate-700 text-xs font-medium shadow-sm">{categoryName}</span>
           </div>
         )}
         {/* New badge if created within 21 days */}
@@ -84,7 +105,7 @@ function ProductCardBase({ product, categoryName, storeSlug, currency, primaryCo
           <Button
             size="sm"
             onClick={() => onAddToCart(product)}
-            className="text-white rounded-lg px-3 w-full sm:w-auto text-sm"
+            className={`text-white px-3 w-full sm:w-auto text-sm ${btnRadiusMap[buttonRoundness]}`}
             style={{ backgroundColor: primaryColor }}
           >
             <ShoppingCart className="h-4 w-4 mr-1" />
@@ -105,6 +126,10 @@ function areEqual(prev: Props, next: Props) {
     prev.categoryName === next.categoryName &&
     prev.currency === next.currency &&
     prev.primaryColor === next.primaryColor &&
+    prev.cardVariant === next.cardVariant &&
+    prev.cornerRadius === next.cornerRadius &&
+    prev.buttonRoundness === next.buttonRoundness &&
+    prev.useRoundedImages === next.useRoundedImages &&
     prev.storeSlug === next.storeSlug
   );
 }

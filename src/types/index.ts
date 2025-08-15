@@ -29,6 +29,22 @@ export interface StoreTheme {
   backgroundColor: string;
   textColor: string;
   fontFamily: string;
+  // Optional UI/appearance controls
+  cornerRadius?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  buttonRoundness?: 'sm' | 'md' | 'lg' | 'full';
+  productCardVariant?: 'minimal' | 'bordered' | 'shadow';
+  productGridColsMd?: number; // e.g. 2..4
+  productGridColsLg?: number; // e.g. 3..6
+  headerStyle?: 'simple' | 'centered' | 'split';
+  // Storefront sections toggles/content
+  heroEnabled?: boolean;
+  heroBackgroundImage?: string;
+  announcementEnabled?: boolean;
+  announcementText?: string;
+  trustBadgesEnabled?: boolean;
+  featuredEnabled?: boolean;
+  newsletterEnabled?: boolean;
+  useRoundedImages?: boolean;
 }
 
 export interface StoreSettings {

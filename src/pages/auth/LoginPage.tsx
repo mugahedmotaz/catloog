@@ -3,8 +3,9 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../../components/ui/card';
-import { Store, Mail, Lock, LogIn } from 'lucide-react';
+import { Card, CardHeader, CardContent, CardFooter } from '../../components/ui/card';
+import { Mail, Lock, LogIn } from 'lucide-react';
+import Logo from '../../components/Logo';
 
 export function LoginPage() {
   const { login, loginWithGoogle, isLoading } = useAuth();
@@ -56,14 +57,9 @@ export function LoginPage() {
       
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center mb-4">
-            <div className="bg-teal-100 p-3 rounded-full">
-              <Store className="h-8 w-8 text-teal-600" />
-            </div>
+          <div className="flex items-center justify-center mb-3">
+            <Logo responsive preset="xl" rounded="lg" alt="Catloog" />
           </div>
-          <CardTitle className="text-2xl font-bold text-gray-900">
-         Catloog
-          </CardTitle>
           <p className="text-gray-600 mt-2">Sign in to your merchant account</p>
         </CardHeader>
 

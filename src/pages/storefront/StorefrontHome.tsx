@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useDeferredValue, useTransition } from 'react';
 import { useParams } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { Search, ShieldCheck, Truck, RotateCcw, Sparkles, Star } from 'lucide-react';
 import { useStore } from '../../contexts/StoreProvider';
 import { useCart } from '../../contexts/CartProvider';
 // import { formatPrice } from '../../lib/utils';
@@ -121,6 +121,13 @@ export function StorefrontHome() {
     return arr;
   }, [filteredProducts, dSortBy]);
 
+  // Featured products (top picks) to highlight above the main grid
+  const featuredProducts = useMemo(() => {
+    // Prefer newest items; fallback to available products if needed
+    const base = [...sortedProducts];
+    return base.slice(0, Math.min(8, base.length));
+  }, [sortedProducts]);
+
   const totalPages = Math.max(1, Math.ceil(sortedProducts.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const pagedProducts = useMemo(() => {
@@ -152,22 +159,77 @@ export function StorefrontHome() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
+      {/* Announcement Bar */}
+      {store.theme.announcementEnabled !== false && (
+        <div className="text-white" style={{ backgroundColor: store.theme.primaryColor || '#0f172a' }}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 text-center text-sm">
+            {store.theme.announcementText && store.theme.announcementText.trim().length > 0 ? (
+              <span className="font-medium">{store.theme.announcementText}</span>
+            ) : (
+              <>
+                <span className="font-medium">Limited time:</span> Free shipping on orders over <span className="font-semibold">$99</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
+      {store.theme.heroEnabled !== false && (
       <div className="relative overflow-hidden">
-        <div
-          className="absolute inset-0 -z-10 opacity-30"
-          style={{ background: `radial-gradient(60rem 60rem at 120% -10%, ${store.theme.primaryColor}20, transparent)` }}
-        />
-        <div className="py-12 md:py-16 bg-gradient-to-r from-slate-50 to-white">
+        {store.theme.heroBackgroundImage ? (
+          <div
+            className="absolute inset-0 -z-10"
+            style={{
+              backgroundImage: `linear-gradient(to right, rgba(255,255,255,0.9), rgba(255,255,255,0.95)), url(${store.theme.heroBackgroundImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
+        ) : (
+          <div
+            className="absolute inset-0 -z-10 opacity-30"
+            style={{ background: `radial-gradient(60rem 60rem at 120% -10%, ${store.theme.primaryColor}20, transparent)` }}
+          />
+        )}
+        <div className="py-12 md:py-20 bg-gradient-to-r from-slate-50 to-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
-              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">Welcome to {store.name}</h1>
-              {store.description && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/90 text-white text-xs font-medium">
+                <Sparkles className="h-3.5 w-3.5" />
+                Handpicked collections, new arrivals weekly
+              </div>
+              <h1 className="mt-4 text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900">
+                Discover {store.name}
+              </h1>
+              {store.description ? (
                 <p className="mt-3 text-slate-600 text-lg max-w-2xl mx-auto">
                   {store.description}
                 </p>
+              ) : (
+                <p className="mt-3 text-slate-600 text-lg max-w-2xl mx-auto">
+                  Premium quality. Fair prices. Zero compromises.
+                </p>
               )}
+
+              <div className="mt-6 flex items-center justify-center gap-3">
+                <a
+                  href="#products"
+                  onClick={(e) => { e.preventDefault(); document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' }); }}
+                  className={`inline-flex items-center justify-center h-11 px-6 text-white font-medium shadow-sm ${store.theme.buttonRoundness === 'full' ? 'rounded-full' : store.theme.buttonRoundness === 'lg' ? 'rounded-xl' : store.theme.buttonRoundness === 'sm' ? 'rounded' : 'rounded-lg'}`}
+                  style={{ backgroundColor: store.theme.primaryColor }}
+                >
+                  Shop now
+                </a>
+                <a
+                  href="#featured"
+                  onClick={(e) => { e.preventDefault(); document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' }); }}
+                  className={`inline-flex items-center justify-center h-11 px-6 border border-slate-200 text-slate-900 font-medium hover:bg-slate-50 ${store.theme.buttonRoundness === 'full' ? 'rounded-full' : store.theme.buttonRoundness === 'lg' ? 'rounded-xl' : store.theme.buttonRoundness === 'sm' ? 'rounded' : 'rounded-lg'}`}
+                >
+                  Explore featured
+                </a>
+              </div>
             </div>
             {/* Category pills */}
             {cats.length > 0 && (
@@ -196,8 +258,81 @@ export function StorefrontHome() {
           </div>
         </div>
       </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Trust Badges */}
+        {store.theme.trustBadgesEnabled !== false && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
+          <div className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 bg-white">
+            <Truck className="h-5 w-5 text-slate-700" />
+            <div className="text-sm">
+              <div className="font-semibold text-slate-900">Fast & free shipping</div>
+              <div className="text-slate-500">On orders over $99</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 bg-white">
+            <ShieldCheck className="h-5 w-5 text-slate-700" />
+            <div className="text-sm">
+              <div className="font-semibold text-slate-900">Secure checkout</div>
+              <div className="text-slate-500">256-bit encryption</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 bg-white">
+            <RotateCcw className="h-5 w-5 text-slate-700" />
+            <div className="text-sm">
+              <div className="font-semibold text-slate-900">Easy returns</div>
+              <div className="text-slate-500">30-day policy</div>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* Featured Picks */}
+        {featuredProducts.length > 0 && (store.theme.featuredEnabled !== false) && (
+          <section id="featured" className="mb-10">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Star className="h-5 w-5 text-yellow-500" /> Featured Picks
+              </h2>
+              <a
+                href="#products"
+                onClick={(e) => { e.preventDefault(); document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' }); }}
+                className="text-sm font-medium text-slate-700 hover:text-slate-900"
+              >
+                Shop all
+              </a>
+            </div>
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${(() => {
+              const md = Math.max(1, Math.min(6, (store.theme.productGridColsMd ?? 3)));
+              return {
+                1: 'md:grid-cols-1', 2: 'md:grid-cols-2', 3: 'md:grid-cols-3', 4: 'md:grid-cols-4', 5: 'md:grid-cols-5', 6: 'md:grid-cols-6',
+              }[md as 1|2|3|4|5|6];
+            })()} ${(() => {
+              const lg = Math.max(1, Math.min(6, (store.theme.productGridColsLg ?? 4)));
+              return {
+                1: 'xl:grid-cols-1', 2: 'xl:grid-cols-2', 3: 'xl:grid-cols-3', 4: 'xl:grid-cols-4', 5: 'xl:grid-cols-5', 6: 'xl:grid-cols-6',
+              }[lg as 1|2|3|4|5|6];
+            })()} gap-4 sm:gap-6`}>            
+              {featuredProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  categoryName={catNameById.get(product.categoryId || '') || 'All products'}
+                  storeSlug={slug || ''}
+                  currency={store.settings.currency}
+                  primaryColor={store.theme.primaryColor}
+                  cardVariant={store.theme.productCardVariant}
+                  cornerRadius={store.theme.cornerRadius}
+                  buttonRoundness={store.theme.buttonRoundness}
+                  useRoundedImages={store.theme.useRoundedImages}
+                  onAddToCart={handleAddToCart}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Filters / Controls */}
         <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8">
           <div className="flex-1 relative">
@@ -240,8 +375,19 @@ export function StorefrontHome() {
         </div>
 
         {/* Products Grid */}
+        <div id="products" />
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${(() => {
+            const md = Math.max(1, Math.min(6, (store.theme.productGridColsMd ?? 3)));
+            return {
+              1: 'md:grid-cols-1', 2: 'md:grid-cols-2', 3: 'md:grid-cols-3', 4: 'md:grid-cols-4', 5: 'md:grid-cols-5', 6: 'md:grid-cols-6',
+            }[md as 1|2|3|4|5|6];
+          })()} ${(() => {
+            const lg = Math.max(1, Math.min(6, (store.theme.productGridColsLg ?? 4)));
+            return {
+              1: 'xl:grid-cols-1', 2: 'xl:grid-cols-2', 3: 'xl:grid-cols-3', 4: 'xl:grid-cols-4', 5: 'xl:grid-cols-5', 6: 'xl:grid-cols-6',
+            }[lg as 1|2|3|4|5|6];
+          })()} gap-4 sm:gap-6`}>
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <div className="aspect-[4/3] animate-pulse bg-slate-100" />
@@ -258,7 +404,17 @@ export function StorefrontHome() {
             <p className="text-gray-500 text-lg">No products found</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${(() => {
+            const md = Math.max(1, Math.min(6, (store.theme.productGridColsMd ?? 3)));
+            return {
+              1: 'md:grid-cols-1', 2: 'md:grid-cols-2', 3: 'md:grid-cols-3', 4: 'md:grid-cols-4', 5: 'md:grid-cols-5', 6: 'md:grid-cols-6',
+            }[md as 1|2|3|4|5|6];
+          })()} ${(() => {
+            const lg = Math.max(1, Math.min(6, (store.theme.productGridColsLg ?? 4)));
+            return {
+              1: 'xl:grid-cols-1', 2: 'xl:grid-cols-2', 3: 'xl:grid-cols-3', 4: 'xl:grid-cols-4', 5: 'xl:grid-cols-5', 6: 'xl:grid-cols-6',
+            }[lg as 1|2|3|4|5|6];
+          })()} gap-4 sm:gap-6`}>
             {pagedProducts.map((product) => (
               <ProductCard
                 key={product.id}
@@ -267,6 +423,10 @@ export function StorefrontHome() {
                 storeSlug={slug || ''}
                 currency={store.settings.currency}
                 primaryColor={store.theme.primaryColor}
+                cardVariant={store.theme.productCardVariant}
+                cornerRadius={store.theme.cornerRadius}
+                buttonRoundness={store.theme.buttonRoundness}
+                useRoundedImages={store.theme.useRoundedImages}
                 onAddToCart={handleAddToCart}
               />
             ))}
@@ -294,6 +454,49 @@ export function StorefrontHome() {
               Next
             </button>
           </div>
+        )}
+
+        {/* Benefits Strip */}
+        <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+            <div className="text-sm font-semibold text-slate-900">Quality you can feel</div>
+            <div className="text-xs text-slate-500">Crafted with premium materials</div>
+          </div>
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+            <div className="text-sm font-semibold text-slate-900">Best price guaranteed</div>
+            <div className="text-xs text-slate-500">No middlemen. No extra costs</div>
+          </div>
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+            <div className="text-sm font-semibold text-slate-900">Support that cares</div>
+            <div className="text-xs text-slate-500">We’re here 7 days a week</div>
+          </div>
+        </div>
+
+        {/* Newsletter CTA */}
+        {store.theme.newsletterEnabled !== false && (
+        <div className="mt-12 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <div className="px-6 py-8 sm:px-8 md:px-10 md:py-10 grid md:grid-cols-2 gap-6 items-center">
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">Join our insider list</h3>
+              <p className="mt-1 text-slate-600 text-sm">Get early access to drops, exclusive deals, and more.</p>
+            </div>
+            <form className="flex flex-col sm:flex-row gap-3" onSubmit={(e) => { e.preventDefault(); toast.success('Subscribed!'); }}>
+              <input
+                type="email"
+                required
+                placeholder="Enter your email"
+                className="flex-1 h-11 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+              <button
+                type="submit"
+                className={`h-11 px-6 text-white font-medium ${store.theme.buttonRoundness === 'full' ? 'rounded-full' : store.theme.buttonRoundness === 'lg' ? 'rounded-xl' : store.theme.buttonRoundness === 'sm' ? 'rounded' : 'rounded-lg'}`}
+                style={{ backgroundColor: store.theme.primaryColor }}
+              >
+                Subscribe
+              </button>
+            </form>
+          </div>
+        </div>
         )}
       </div>
     </div>
