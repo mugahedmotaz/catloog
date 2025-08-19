@@ -293,17 +293,17 @@ export default function AdminDomainsPage() {
         {storesWithDomain.length === 0 ? (
           <div className="text-sm text-gray-500">No domains linked yet.</div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="table-scroll scrollbar">
             <table className="min-w-full text-sm">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
-                  <th className="text-left p-2">Store</th>
-                  <th className="text-left p-2">Domain</th>
-                  <th className="text-left p-2">Verified</th>
-                  <th className="text-left p-2">Persisted status</th>
-                  <th className="text-left p-2">Last checked</th>
-                  <th className="text-left p-2">Live status</th>
-                  <th className="text-left p-2">Actions</th>
+                  <th className="text-left p-2 sticky top-0 bg-gray-50">Store</th>
+                  <th className="text-left p-2 sticky top-0 bg-gray-50">Domain</th>
+                  <th className="text-left p-2 sticky top-0 bg-gray-50">Verified</th>
+                  <th className="text-left p-2 sticky top-0 bg-gray-50">Persisted status</th>
+                  <th className="text-left p-2 sticky top-0 bg-gray-50">Last checked</th>
+                  <th className="text-left p-2 sticky top-0 bg-gray-50">Live status</th>
+                  <th className="text-left p-2 sticky top-0 bg-gray-50">Actions</th>
                 </tr>
               </thead>
               <tbody>

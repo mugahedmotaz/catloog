@@ -8,6 +8,10 @@
   .app-container {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
+  /* Fixed app width helper if needed */
+  .fixed-app-width {
+    max-width: 1280px;
+  }
   /* Standard card */
   .card {
     @apply bg-white border border-gray-200 rounded-xl shadow-sm;
@@ -31,6 +35,38 @@
   .grid-gap {
     @apply gap-4 sm:gap-6 lg:gap-8;
   }
+
+  /* Table scroll container with sticky header support */
+  .table-scroll {
+    @apply rounded-lg border border-gray-200 bg-white;
+    /* Control height on small screens; adjust as needed */
+    max-height: 60vh;
+    overflow: auto;
+  }
+}
+
+/* Custom scrollbar styling (WebKit) */
+.scrollbar::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+.scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9; /* slate-100 */
+  border-radius: 9999px;
+}
+.scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1; /* slate-300 */
+  border-radius: 9999px;
+  border: 2px solid #f1f5f9;
+}
+.scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8; /* slate-400 */
+}
+
+/* Firefox */
+.scrollbar {
+  scrollbar-color: #cbd5e1 #f1f5f9; /* thumb track */
+  scrollbar-width: thin;
 }
 
 /* stylelint-enable at-rule-no-unknown */
