@@ -1,10 +1,12 @@
-import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { Suspense, lazy, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider } from './contexts/AuthProvider';
 import { AdminAuthProvider } from './contexts/AdminAuthProvider';
 import { StoreProvider } from './contexts/StoreProvider';
+import { useStore } from './contexts/StoreProvider';
+
 import { CartProvider } from './contexts/CartProvider';
 import { WishlistProvider } from './contexts/WishlistProvider';
 
@@ -106,10 +108,43 @@ function AdminProtectedRoute({ children }: { children: React.ReactNode }) {
   return user ? <>{children}</> : <Navigate to="/admin/login" />;
 }
 
+function DomainRedirect() {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { getStoreByDomain } = useStore();
+
+  useEffect(() => {
+    // Skip for admin, dashboard, login and API-like paths
+    if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard') || pathname.startsWith('/login') || pathname.startsWith('/register')) return;
+    const host = window.location.host.toLowerCase();
+    // If running on preview/dev domain, do nothing
+    const appDomains = [
+      (import.meta as any).env?.VITE_APP_DOMAIN?.toLowerCase?.(),
+      window.location.hostname.endsWith('localhost') ? host : undefined
+    ].filter(Boolean) as string[];
+    if (appDomains.some(d => host.includes(d))) return;
+
+    // strip www.
+    const naked = host.replace(/^www\./, '');
+    // already on /store/:slug -> do nothing
+    if (pathname.startsWith('/store/')) return;
+
+    (async () => {
+      const store = await getStoreByDomain(naked);
+      if (store?.slug) {
+        navigate(`/store/${store.slug}`, { replace: true });
+      }
+    })();
+  }, [pathname, getStoreByDomain, navigate]);
+
+  return null;
+}
+
 function AppContent() {
   return (
     <Router>
       <div className="App">
+        <DomainRedirect />
         <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p>Loading...</p></div>}>
           <Routes>
           {/* Public Routes */}

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Shield, Building2, LogOut, Menu, X, Receipt } from 'lucide-react';
 import { useAdminAuth } from '../../contexts/AdminAuthProvider';
 import { Button } from '../ui/button';
@@ -12,11 +12,23 @@ export function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Close sidebar on Escape and lock body scroll when sidebar is open (mobile)
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setSidebarOpen(false); };
+    document.addEventListener('keydown', onKeyDown);
+    document.documentElement.classList.add('overflow-hidden');
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.documentElement.classList.remove('overflow-hidden');
+    };
+  }, [sidebarOpen]);
 
   const displayName = getDisplayName(user as any);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="h-screen bg-gray-50 flex">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
@@ -29,7 +41,7 @@ export function AdminLayout() {
       <div
         className={`fixed inset-y-0 left-0 z-50 w-60 bg-white shadow-lg transform ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 transition-transform duration-300 ease-in-out lg:static lg:block`}
+        } lg:translate-x-0 transition-transform duration-300 ease-in-out lg:static lg:block h-screen flex flex-col`}
       >
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
           <div className="flex items-center gap-2">
@@ -41,52 +53,49 @@ export function AdminLayout() {
           </Button>
         </div>
 
-        <nav className="mt-8">
+        <nav className="mt-8 flex-1 overflow-y-auto">
           <div className="px-4 space-y-2">
-            <Link
+            <NavLink
               to="/admin/plans"
-              className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                location.pathname === '/admin/plans'
-                  ? 'bg-teal-50 text-teal-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              className={({ isActive }) => `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                isActive ? 'bg-teal-50 text-teal-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
+              aria-current={location.pathname === '/admin/plans' ? 'page' : undefined}
               onClick={() => setSidebarOpen(false)}
             >
               <Shield className="h-5 w-5 mr-3" /> Plans
-            </Link>
-            <Link
+            </NavLink>
+            <NavLink
               to="/admin/stores"
-              className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                location.pathname === '/admin/stores'
-                  ? 'bg-teal-50 text-teal-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              className={({ isActive }) => `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                isActive ? 'bg-teal-50 text-teal-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
+              aria-current={location.pathname === '/admin/stores' ? 'page' : undefined}
               onClick={() => setSidebarOpen(false)}
             >
               <Building2 className="h-5 w-5 mr-3" /> Stores
-            </Link>
-            <Link
+            </NavLink>
+            <NavLink
               to="/admin/payments"
-              className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                location.pathname === '/admin/payments'
-                  ? 'bg-teal-50 text-teal-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              className={({ isActive }) => `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                isActive ? 'bg-teal-50 text-teal-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
+              aria-current={location.pathname === '/admin/payments' ? 'page' : undefined}
               onClick={() => setSidebarOpen(false)}
             >
               <Receipt className="h-5 w-5 mr-3" /> Payments
-            </Link>
+            </NavLink>
           </div>
 
           <div className="mt-8 pt-8 border-t border-gray-200">
             <div className="px-4">
               <Button
                 variant="ghost"
-                className="w-full flex items-center justify-start px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                className="flex items-center bg-red-600 w-full justify-start text-sm font-medium text-white hover:bg-red-700"
                 onClick={async () => { await logout(); navigate('/admin/login'); }}
               >
-                <LogOut className="h-5 w-5 mr-3" />
-                Sign out
+                <LogOut className="h-5 w-5 mr-2" />
+                Log out
               </Button>
             </div>
           </div>
@@ -94,7 +103,7 @@ export function AdminLayout() {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 lg:ml-1">
+      <div className="flex-1 lg:ml-1 h-screen flex flex-col overflow-hidden">
         {/* Top bar */}
         <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-gray-200 w-full">
           <div className="app-container flex items-center justify-between h-16">
@@ -108,7 +117,7 @@ export function AdminLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 py-6">
+        <main className="flex-1 overflow-y-auto py-6">
           <div className="app-container">
             <Outlet />
           </div>

@@ -7,6 +7,7 @@ import { useCart } from '../../contexts/CartProvider';
 import toast from 'react-hot-toast';
 import type { Store, Product, Category } from '../../types';
 import { supabase } from '../../services/supabase';
+import SEO from '../../components/SEO';
 import { ProductCard } from '../../components/storefront/ProductCard';
 
 export function StorefrontHome() {
@@ -160,6 +161,19 @@ export function StorefrontHome() {
 
   return (
     <div className="space-y-12">
+      <SEO
+        title={`${store.name}`}
+        description={store.description || undefined}
+        canonical={typeof window !== 'undefined' ? window.location.href : undefined}
+        image={store.theme.heroBackgroundImage || undefined}
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'Store',
+          name: store.name,
+          description: store.description || undefined,
+          url: typeof window !== 'undefined' ? window.location.href : undefined,
+        }}
+      />
       {/* Announcement Bar */}
       {store.theme.announcementEnabled !== false && (
         <div className="text-white" style={{ backgroundColor: store.theme.primaryColor || '#0f172a' }}>

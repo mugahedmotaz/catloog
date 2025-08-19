@@ -54,6 +54,9 @@ export interface StoreSettings {
   deliveryFee: number;
   minimumOrder: number;
   orderMessageTemplate: string;
+  // Domain settings (optional)
+  customDomain?: string; // e.g. store.example.com or example.com
+  domainVerified?: boolean;
 }
 
 export interface Product {

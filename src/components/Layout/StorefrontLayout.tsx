@@ -6,6 +6,7 @@ import type { Store } from '../../types';
 import { useCart } from '../../contexts/CartProvider';
 import { Button } from '../ui/button';
 import { generateWhatsAppUrl } from '../../lib/utils';
+import SEO from '../SEO';
 
 export function StorefrontLayout() {
   const { slug } = useParams<{ slug: string }>();
@@ -65,6 +66,23 @@ export function StorefrontLayout() {
            '--background': store.theme.backgroundColor,
            '--text': store.theme.textColor,
          } as React.CSSProperties}>
+      <SEO
+        title={`${store.name} – Online Store`}
+        description={store.description || `Browse products from ${store.name}`}
+        canonical={typeof window !== 'undefined' ? window.location.href : undefined}
+        image={store.logo || undefined}
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'Store',
+          name: store.name,
+          description: store.description || undefined,
+          url: typeof window !== 'undefined' ? window.location.href : undefined,
+          logo: store.logo || undefined,
+          sameAs: store.whatsappNumber ? [
+            `https://wa.me/${store.whatsappNumber.replace(/[^\d]/g, '')}`
+          ] : undefined,
+        }}
+      />
       
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">

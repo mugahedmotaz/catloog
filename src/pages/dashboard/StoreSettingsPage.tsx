@@ -22,9 +22,11 @@ export function StoreSettingsPage() {
     allowDelivery: currentStore?.settings.allowDelivery || false,
     deliveryFee: currentStore?.settings.deliveryFee.toString() || '0',
     minimumOrder: currentStore?.settings.minimumOrder.toString() || '0',
-    orderMessageTemplate: currentStore?.settings.orderMessageTemplate || ''
+    orderMessageTemplate: currentStore?.settings.orderMessageTemplate || '',
+    customDomain: currentStore?.settings.customDomain || ''
   });
-  const [errors, setErrors] = useState<{ name?: string; whatsappNumber?: string; currency?: string; language?: string; deliveryFee?: string; minimumOrder?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; whatsappNumber?: string; currency?: string; language?: string; deliveryFee?: string; minimumOrder?: string; customDomain?: string }>({});
+  const [linkingDomain, setLinkingDomain] = useState(false);
 
   const previewSlug = useMemo(() => formData.name ? generateStoreSlug(formData.name) : (currentStore?.slug || ''), [formData.name, currentStore?.slug]);
   const storeUrl = previewSlug ? `${window.location.origin}/store/${previewSlug}` : '';
@@ -41,6 +43,12 @@ export function StoreSettingsPage() {
     }
     const min = Number(formData.minimumOrder);
     if (Number.isNaN(min) || min < 0) next.minimumOrder = 'Minimum order must be a valid number';
+    // Basic domain validation if provided
+    if (formData.customDomain.trim()) {
+      const domain = formData.customDomain.trim();
+      const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+      if (!domainRegex.test(domain)) next.customDomain = 'Invalid domain format';
+    }
     return next;
   };
 
@@ -68,7 +76,8 @@ export function StoreSettingsPage() {
       allowDelivery: currentStore.settings.allowDelivery || false,
       deliveryFee: (currentStore.settings.deliveryFee ?? 0).toString(),
       minimumOrder: (currentStore.settings.minimumOrder ?? 0).toString(),
-      orderMessageTemplate: currentStore.settings.orderMessageTemplate || ''
+      orderMessageTemplate: currentStore.settings.orderMessageTemplate || '',
+      customDomain: currentStore.settings.customDomain || ''
     });
   }, [currentStore]);
 
@@ -93,7 +102,9 @@ export function StoreSettingsPage() {
         allowDelivery: formData.allowDelivery,
         deliveryFee: parseFloat(formData.deliveryFee) || 0,
         minimumOrder: parseFloat(formData.minimumOrder) || 0,
-        orderMessageTemplate: formData.orderMessageTemplate
+        orderMessageTemplate: formData.orderMessageTemplate,
+        customDomain: formData.customDomain.trim() || undefined,
+        domainVerified: currentStore?.settings.domainVerified ?? false
       }
     };
 
@@ -155,7 +166,7 @@ export function StoreSettingsPage() {
     if (!currentStore) return;
     const list = (products || []).filter(p => p.storeId === currentStore.id);
     const header = ['id','name','description','price','isAvailable','categoryId','images'];
-    const rows = list.map(p => [p.id, p.name, p.description || '', p.price, p.isAvailable, p.categoryId || '', JSON.stringify(p.images || [])]);
+    const rows = list.map(p => [p.id, p.name, p.description || '', p.price, String(p.isAvailable), p.categoryId || '', JSON.stringify(p.images || [])]);
     exportCsv(`store_${currentStore.slug || currentStore.id}_products.csv`, header, rows);
   };
 
@@ -238,6 +249,136 @@ export function StoreSettingsPage() {
                   <ExternalLink className="h-4 w-4" />
                 </Button>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Domain Management */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Domain Management</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Connect your custom domain to your store. Enter your domain (e.g. <code>store.example.com</code> or <code>example.com</code>) then follow the DNS instructions below.
+            </p>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Custom Domain</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div className="md:col-span-2">
+                  <Input
+                    value={formData.customDomain}
+                    onChange={(e) => setFormData(prev => ({ ...prev, customDomain: e.target.value }))}
+                    placeholder="yourdomain.com"
+                  />
+                  {errors.customDomain && <p className="text-xs text-red-600 mt-1">{errors.customDomain}</p>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" onClick={() => {
+                    const domain = formData.customDomain.trim();
+                    if (!domain) return;
+                    navigator.clipboard.writeText(domain);
+                    toast.success('Domain copied');
+                  }} disabled={!formData.customDomain.trim()}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => {
+                    const domain = formData.customDomain.trim();
+                    if (!domain) return;
+                    window.open(`https://${domain}`, '_blank');
+                  }} disabled={!formData.customDomain.trim()}>
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    className="bg-teal-600 text-white hover:bg-teal-700"
+                    disabled={linkingDomain || !!errors.customDomain || !formData.customDomain.trim() || isLoading}
+                    onClick={async () => {
+                      const domain = formData.customDomain.trim();
+                      if (!domain) { toast.error('Please enter a domain'); return; }
+                      setLinkingDomain(true);
+                      try {
+                        const apiBase = (import.meta as any)?.env?.VITE_API_BASE || '';
+                        const resp = await fetch(`${apiBase}/api/connect-domain`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ domain }),
+                        });
+                        let data: any = null;
+                        try {
+                          const text = await resp.text();
+                          if (text) data = JSON.parse(text);
+                        } catch {
+                          // ignore parse error; data stays null
+                        }
+                        if (!resp.ok) {
+                          const msg = data?.error || data?.message || `HTTP ${resp.status}`;
+                          toast.error(msg);
+                        } else {
+                          if (data.verified) {
+                            toast.success('Domain connected and verified on Vercel');
+                          } else {
+                            toast(() => (
+                              <div>
+                                <div className="font-medium">Domain added. Pending DNS verification</div>
+                                <div className="text-sm">Create A → 76.76.21.21 (apex) and CNAME → cname.vercel-dns.com (subdomain), then retry.</div>
+                              </div>
+                            ));
+                          }
+                          // Persist settings update to store
+                          if (currentStore) {
+                            const payload = {
+                              name: formData.name,
+                              slug: previewSlug,
+                              description: formData.description,
+                              whatsappNumber: formData.whatsappNumber,
+                              logo: formData.logo,
+                              settings: {
+                                currency: formData.currency,
+                                language: formData.language as 'en' | 'ar',
+                                allowDelivery: formData.allowDelivery,
+                                deliveryFee: parseFloat(formData.deliveryFee) || 0,
+                                minimumOrder: parseFloat(formData.minimumOrder) || 0,
+                                orderMessageTemplate: formData.orderMessageTemplate,
+                                customDomain: domain,
+                                domainVerified: !!data?.verified,
+                              },
+                            };
+                            await updateStore(currentStore.id, payload);
+                          } else {
+                            // If creating a new store, just reflect verification state in UI
+                            setFormData((prev) => ({ ...prev, customDomain: domain }));
+                          }
+                        }
+                      } catch (e: any) {
+                        // eslint-disable-next-line no-console
+                        console.error(e);
+                        toast.error(e?.message || 'Unexpected error while connecting domain');
+                      } finally {
+                        setLinkingDomain(false);
+                      }
+                    }}
+                  >
+                    {linkingDomain ? 'Connecting…' : 'Connect Domain'}
+                  </Button>
+                </div>
+              </div>
+              {currentStore?.settings.domainVerified ? (
+                <p className="text-xs text-green-700 mt-1">Domain is verified and active</p>
+              ) : formData.customDomain.trim() ? (
+                <p className="text-xs text-amber-700 mt-1">Domain pending verification. Complete DNS setup then click Save.</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-gray-700">DNS Setup (Vercel)</div>
+              <ul className="text-sm text-gray-600 list-disc pl-5 space-y-1">
+                <li><span className="font-medium">Apex domain</span> (example.com): Create A record → 76.76.21.21</li>
+                <li><span className="font-medium">Subdomain</span> (www.example.com): Create CNAME → cname.vercel-dns.com</li>
+                <li>Set primary domain in Vercel to your preferred root (usually example.com). www will redirect automatically.</li>
+              </ul>
+              <p className="text-xs text-gray-500">After DNS propagates, return here and click Save to store the domain. SSL will be issued automatically by Vercel.</p>
             </div>
           </CardContent>
         </Card>

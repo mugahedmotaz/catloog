@@ -21,6 +21,7 @@ interface StoreContextType {
   updateCategory: (categoryId: string, categoryData: Partial<Category>) => Promise<boolean>;
   deleteCategory: (categoryId: string) => Promise<boolean>;
   getStoreBySlug: (slug: string) => Promise<Store | null>;
+  getStoreByDomain: (domain: string) => Promise<Store | null>;
   createOrder: (order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => Promise<boolean>;
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<boolean>;
   searchStores: (query: string, opts?: { preferStoreId?: string; limit?: number }) => Promise<Store[]>;
@@ -644,6 +645,24 @@ export function StoreProvider({ children }: StoreProviderProps) {
     return mapStore(data);
   };
 
+  const getStoreByDomain = async (domain: string): Promise<Store | null> => {
+    const d = (domain || '').trim().toLowerCase();
+    if (!d) return null;
+    // Match exact customDomain stored in settings
+    const { data, error } = await supabase
+      .from('stores')
+      .select('*')
+      .contains('settings', { customDomain: d })
+      .limit(1)
+      .single();
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error fetching store by domain:', error);
+      return null;
+    }
+    return mapStore(data);
+  };
+
   const searchStores = async (
     query: string,
     opts?: { preferStoreId?: string; limit?: number }
@@ -703,6 +722,7 @@ export function StoreProvider({ children }: StoreProviderProps) {
     deleteCategory,
     getStoreBySlug,
     searchStores,
+    getStoreByDomain,
     createOrder,
     updateOrderStatus,
     isLoading

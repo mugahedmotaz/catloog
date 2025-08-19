@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../../contexts/StoreProvider';
 import { formatPrice } from '../../lib/utils';
+import SEO from '../../components/SEO';
 
 export function CategoriesPage() {
   const { slug } = useParams();
@@ -44,6 +45,17 @@ export function CategoriesPage() {
 
   return (
     <div className="p-4 max-w-5xl mx-auto">
+      <SEO
+        title={`${(stores?.find((s: any) => s.id === storeId)?.name) || 'Store'} – Categories`}
+        description={(stores?.find((s: any) => s.id === storeId)?.description) || undefined}
+        canonical={typeof window !== 'undefined' ? window.location.href : undefined}
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: `${(stores?.find((s: any) => s.id === storeId)?.name) || 'Store'} – Categories`,
+          url: typeof window !== 'undefined' ? window.location.href : undefined,
+        }}
+      />
       <h1 className="text-base sm:text-xl font-bold mb-4">Categories</h1>
       <div className="space-y-4 sm:space-y-6">
         {filteredCategories.map((cat) => (

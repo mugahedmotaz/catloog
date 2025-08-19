@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../services/supabase';
 import { Check, Shield, Zap, LineChart, Sparkles, ArrowRight, Globe, Mail, Github } from 'lucide-react';
 import Logo from '../../components/Logo';
+import SEO from '../../components/SEO';
 
 export default function LandingPage() {
   // English-only landing page
@@ -48,6 +49,12 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white text-slate-900">
+      <SEO
+        title="Catloog – Build your store’s catalog and storefront"
+        description="Create and manage your products, orders, and a beautiful storefront powered by Supabase & React. Start free and grow with Catloog."
+        canonical={typeof window !== 'undefined' ? window.location.origin + '/' : undefined}
+        image={typeof window !== 'undefined' ? window.location.origin + '/og-image.png' : undefined}
+      />
       {/* Navigation */}
       <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-white/70 bg-white/80 border-b border-slate-200/60">
         <div className="app-container">

@@ -8,6 +8,7 @@ import { formatPrice } from '../../lib/utils';
 import { toast } from 'react-hot-toast';
 import { ShoppingCart, Heart, HeartOff, Share2, CheckCircle, XCircle } from 'lucide-react';
 import { useWishlist } from '../../contexts/WishlistProvider';
+import SEO from '../../components/SEO';
 
 export function ProductDetailsPage() {
   const { productId, slug } = useParams();
@@ -130,7 +131,7 @@ export function ProductDetailsPage() {
         setVariants(vars);
         // Initialize selections with nulls
         const init: Record<string, string | null> = {};
-        opts.forEach(o => { init[o.name] = null; });
+        opts.forEach((o: { id: string; name: string; values: string[]; order: number }) => { init[o.name] = null; });
         setSelections(init);
       } catch (e) {
         // eslint-disable-next-line no-console
@@ -233,6 +234,26 @@ export function ProductDetailsPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
+      <SEO
+        title={`${product.name} – ${stores?.find((s: any) => s.id === storeId)?.name || 'Store'}`}
+        description={product.description || undefined}
+        canonical={typeof window !== 'undefined' ? window.location.href : undefined}
+        image={(selectedVariant?.images && selectedVariant.images[0]) || (product.images && product.images[0]) || undefined}
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'Product',
+          name: product.name,
+          description: product.description || undefined,
+          image: (selectedVariant?.images && selectedVariant.images.length ? selectedVariant.images : product.images) || undefined,
+          offers: {
+            '@type': 'Offer',
+            price: String(selectedVariant?.price ?? product.price),
+            priceCurrency: currency,
+            availability: product.isAvailable ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+            url: typeof window !== 'undefined' ? window.location.href : undefined
+          }
+        }}
+      />
       {/* Breadcrumbs */}
       <nav className="mb-4 text-sm text-slate-500">
         <Link to={`/store/${slug}`} className="hover:text-slate-700">Store</Link>
