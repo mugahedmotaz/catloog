@@ -648,13 +648,12 @@ export function StoreProvider({ children }: StoreProviderProps) {
   const getStoreByDomain = async (domain: string): Promise<Store | null> => {
     const d = (domain || '').trim().toLowerCase();
     if (!d) return null;
-    // Match exact customDomain stored in settings
+    // Match exact customDomain stored in settings (precise JSON path equality)
     const { data, error } = await supabase
       .from('stores')
       .select('*')
-      .contains('settings', { customDomain: d })
-      .limit(1)
-      .single();
+      .eq('settings->>customDomain', d)
+      .maybeSingle();
     if (error) {
       // eslint-disable-next-line no-console
       console.error('Error fetching store by domain:', error);

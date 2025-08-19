@@ -3,6 +3,9 @@ export const config = { runtime: 'edge' };
 
 const ALLOWED_ORIGINS = new Set([
   'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:4173', // vite preview
+  'http://127.0.0.1:4173',
   'https://catloog.vercel.app',
   'https://www.catloog.vercel.app',
 ]);
@@ -38,12 +41,14 @@ export default async function handler(req: Request): Promise<Response> {
     return withCors(new Response(null, { status: 204 }), origin || undefined);
   }
   if (req.method === 'GET' && url.searchParams.get('debug') === '1') {
+    const storesProjectId = (process as any)?.env?.VERCEL_STORES_PROJECT_ID as string | undefined;
     const projectId = (process as any)?.env?.VERCEL_PROJECT_ID as string | undefined;
     const token = (process as any)?.env?.VERCEL_TOKEN as string | undefined;
     const teamId = (process as any)?.env?.VERCEL_TEAM_ID as string | undefined;
     return corsJson(origin, {
       ok: true,
       env: {
+        VERCEL_STORES_PROJECT_ID: Boolean(storesProjectId),
         VERCEL_PROJECT_ID: Boolean(projectId),
         VERCEL_TOKEN: Boolean(token),
         VERCEL_TEAM_ID: Boolean(teamId),
@@ -51,7 +56,32 @@ export default async function handler(req: Request): Promise<Response> {
       runtime: 'edge',
     });
   }
-  if (req.method !== 'POST') {
+  // GET status: /api/connect-domain?status=1&domain=foo.com
+  if (req.method === 'GET' && url.searchParams.get('status') === '1') {
+    const domain = url.searchParams.get('domain');
+    const projectId = ((process as any)?.env?.VERCEL_STORES_PROJECT_ID as string | undefined) || ((process as any)?.env?.VERCEL_PROJECT_ID as string | undefined);
+    const token = (process as any)?.env?.VERCEL_TOKEN as string | undefined;
+    const teamId = (process as any)?.env?.VERCEL_TEAM_ID as string | undefined;
+    if (!projectId || !token) return corsJson(origin, { error: 'Missing Vercel credentials on server' }, 500);
+    if (!domain) return corsJson(origin, { error: 'Missing domain' }, 400);
+
+    try {
+      const statusUrl = new URL(`https://api.vercel.com/v6/domains/${encodeURIComponent(domain)}`);
+      if (teamId) statusUrl.searchParams.set('teamId', teamId);
+      const statusResp = await fetch(statusUrl.toString(), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const text = await statusResp.text();
+      const data = text ? JSON.parse(text) : null;
+      if (!statusResp.ok) {
+        return corsJson(origin, { error: data?.error?.message || data || 'Failed to fetch domain status' }, statusResp.status);
+      }
+      return corsJson(origin, { ok: true, domain, ...data });
+    } catch (e: any) {
+      return corsJson(origin, { error: e?.message || 'Unexpected error' }, 500);
+    }
+  }
+  if (req.method !== 'POST' && req.method !== 'DELETE') {
     return corsJson(origin, { error: 'Method Not Allowed' }, 405);
   }
 
@@ -69,11 +99,30 @@ export default async function handler(req: Request): Promise<Response> {
   // Basic domain validation (ASCII only; IDN can be extended later)
   const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[A-Za-z]{2,}$/;
 
-  const projectId = (process as any)?.env?.VERCEL_PROJECT_ID as string | undefined;
+  const projectId = ((process as any)?.env?.VERCEL_STORES_PROJECT_ID as string | undefined) || ((process as any)?.env?.VERCEL_PROJECT_ID as string | undefined);
   const token = (process as any)?.env?.VERCEL_TOKEN as string | undefined;
   const teamId = (process as any)?.env?.VERCEL_TEAM_ID as string | undefined;
   if (!projectId || !token) {
     return corsJson(origin, { error: 'Missing Vercel credentials on server' }, 500);
+  }
+
+  if (req.method === 'DELETE') {
+    try {
+      const delUrl = new URL(`https://api.vercel.com/v9/projects/${encodeURIComponent(projectId)}/domains/${encodeURIComponent(String(domain))}`);
+      if (teamId) delUrl.searchParams.set('teamId', teamId);
+      const delResp = await fetch(delUrl.toString(), {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const text = await delResp.text();
+      let data: any = null; try { data = text ? JSON.parse(text) : null; } catch {}
+      if (!delResp.ok) {
+        return corsJson(origin, { error: data?.error?.message || data || 'Failed to remove domain' }, delResp.status);
+      }
+      return corsJson(origin, { success: true, removed: true, domain: String(domain) });
+    } catch (e: any) {
+      return corsJson(origin, { error: e?.message || 'Unexpected error' }, 500);
+    }
   }
 
   const normalized = String(domain).trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');

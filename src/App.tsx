@@ -52,6 +52,7 @@ const AdminPlansPage = lazy(() => import('./pages/admin/AdminPlansPage'));
 const AdminStoresPage = lazy(() => import('./pages/admin/AdminStoresPage'));
 const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
 const AdminPaymentsPage = lazy(() => import('./pages/admin/AdminPaymentsPage'));
+const AdminDomainsPage = lazy(() => import('./pages/admin/AdminDomainsPage'));
 
 // i18n removed: English-only app
 
@@ -201,6 +202,11 @@ function AppContent() {
             <Route path="payments" element={
               <AdminRoute>
                 <AdminPaymentsPage />
+              </AdminRoute>
+            } />
+            <Route path="domains" element={
+              <AdminRoute>
+                <AdminDomainsPage />
               </AdminRoute>
             } />
           </Route>

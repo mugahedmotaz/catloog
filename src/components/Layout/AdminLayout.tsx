@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Shield, Building2, LogOut, Menu, X, Receipt } from 'lucide-react';
+import { Shield, Building2, LogOut, Menu, X, Receipt, Globe } from 'lucide-react';
 import { useAdminAuth } from '../../contexts/AdminAuthProvider';
 import { Button } from '../ui/button';
 import Logo from '../../components/Logo';
@@ -84,6 +84,16 @@ export function AdminLayout() {
               onClick={() => setSidebarOpen(false)}
             >
               <Receipt className="h-5 w-5 mr-3" /> Payments
+            </NavLink>
+            <NavLink
+              to="/admin/domains"
+              className={({ isActive }) => `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                isActive ? 'bg-teal-50 text-teal-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+              aria-current={location.pathname === '/admin/domains' ? 'page' : undefined}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <Globe className="h-5 w-5 mr-3" /> Domains
             </NavLink>
           </div>
 
