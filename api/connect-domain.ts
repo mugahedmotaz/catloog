@@ -1,24 +1,70 @@
 // Edge runtime (ESM) to avoid CJS/ESM mismatch
 export const config = { runtime: 'edge' };
 
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:5173',
+  'https://catloog.vercel.app',
+  'https://www.catloog.vercel.app',
+]);
+
+function withCors(resp: Response, origin?: string) {
+  const headers = new Headers(resp.headers);
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    headers.set('Access-Control-Allow-Origin', origin);
+    headers.set('Vary', 'Origin');
+  }
+  headers.set('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  headers.set('Access-Control-Max-Age', '86400');
+  return new Response(resp.body, { status: resp.status, headers });
+}
+
+function corsJson(origin: string | null, obj: any, status = 200) {
+  const resp = new Response(JSON.stringify(obj), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return withCors(resp, origin || undefined);
+}
+
 // This function connects (adds) a custom domain to the current Vercel project via Vercel REST API
 // Required env vars: VERCEL_PROJECT_ID, VERCEL_TOKEN, optional VERCEL_TEAM_ID
 // Request body: { domain: string }
 export default async function handler(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+  const origin = req.headers.get('origin');
+  if (req.method === 'OPTIONS') {
+    // Preflight
+    return withCors(new Response(null, { status: 204 }), origin || undefined);
+  }
+  if (req.method === 'GET' && url.searchParams.get('debug') === '1') {
+    const projectId = (process as any)?.env?.VERCEL_PROJECT_ID as string | undefined;
+    const token = (process as any)?.env?.VERCEL_TOKEN as string | undefined;
+    const teamId = (process as any)?.env?.VERCEL_TEAM_ID as string | undefined;
+    return corsJson(origin, {
+      ok: true,
+      env: {
+        VERCEL_PROJECT_ID: Boolean(projectId),
+        VERCEL_TOKEN: Boolean(token),
+        VERCEL_TEAM_ID: Boolean(teamId),
+      },
+      runtime: 'edge',
+    });
+  }
   if (req.method !== 'POST') {
-    return json({ error: 'Method Not Allowed' }, 405);
+    return corsJson(origin, { error: 'Method Not Allowed' }, 405);
   }
 
   let body: any = null;
   try {
     body = await req.json();
   } catch (e) {
-    return json({ error: 'Invalid JSON body' }, 400);
+    return corsJson(origin, { error: 'Invalid JSON body' }, 400);
   }
 
   const domain = body?.domain;
   if (!domain || typeof domain !== 'string') {
-    return json({ error: 'Missing domain' }, 400);
+    return corsJson(origin, { error: 'Missing domain' }, 400);
   }
   // Basic domain validation (ASCII only; IDN can be extended later)
   const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[A-Za-z]{2,}$/;
@@ -27,12 +73,12 @@ export default async function handler(req: Request): Promise<Response> {
   const token = (process as any)?.env?.VERCEL_TOKEN as string | undefined;
   const teamId = (process as any)?.env?.VERCEL_TEAM_ID as string | undefined;
   if (!projectId || !token) {
-    return json({ error: 'Missing Vercel credentials on server' }, 500);
+    return corsJson(origin, { error: 'Missing Vercel credentials on server' }, 500);
   }
 
   const normalized = String(domain).trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
   if (!domainRegex.test(normalized)) {
-    return json({ error: 'Invalid domain format' }, 400);
+    return corsJson(origin, { error: 'Invalid domain format' }, 400);
   }
   const isApex = normalized.split('.').length === 2; // example.com
 
@@ -59,15 +105,15 @@ export default async function handler(req: Request): Promise<Response> {
       if (!(code && String(code).includes('domain_already'))) {
         // Common helpful messages
         if (code === 'domain_conflict' || code === 'domain_already_in_use') {
-          return json({ error: 'Domain is already in use by another project or team on Vercel. Remove it there first or transfer ownership.' }, 409);
+          return corsJson(origin, { error: 'Domain is already in use by another project or team on Vercel. Remove it there first or transfer ownership.' }, 409);
         }
         if (addResp.status === 401 || addResp.status === 403) {
-          return json({ error: 'Unauthorized: Check VERCEL_TOKEN and VERCEL_TEAM_ID (if using a Team).' }, addResp.status);
+          return corsJson(origin, { error: 'Unauthorized: Check VERCEL_TOKEN and VERCEL_TEAM_ID (if using a Team).' }, addResp.status);
         }
         if (addResp.status === 404) {
-          return json({ error: 'Project not found: Verify VERCEL_PROJECT_ID belongs to this project/account/team.' }, 404);
+          return corsJson(origin, { error: 'Project not found: Verify VERCEL_PROJECT_ID belongs to this project/account/team.' }, 404);
         }
-        return json({ error: addData?.error?.message || addData || 'Failed to add domain' }, addResp.status);
+        return corsJson(origin, { error: addData?.error?.message || addData || 'Failed to add domain' }, addResp.status);
       }
     }
 
@@ -93,13 +139,13 @@ export default async function handler(req: Request): Promise<Response> {
     } catch {}
 
     if (!statusResp.ok) {
-      return json({ error: statusData?.error?.message || statusData || 'Failed to fetch domain status' }, statusResp.status);
+      return corsJson(origin, { error: statusData?.error?.message || statusData || 'Failed to fetch domain status' }, statusResp.status);
     }
 
     const verified = Boolean(statusData?.verified);
     const txtRecords = statusData?.verification || [];
 
-    return json({
+    return corsJson(origin, {
       success: true,
       domain: normalized,
       verified,
@@ -112,13 +158,7 @@ export default async function handler(req: Request): Promise<Response> {
       verification: txtRecords,
     });
   } catch (e: any) {
-    return json({ error: e?.message || 'Unexpected error' }, 500);
+    return corsJson(origin, { error: e?.message || 'Unexpected error' }, 500);
   }
 }
 
-function json(obj: any, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
