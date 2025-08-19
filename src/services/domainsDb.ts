@@ -139,6 +139,42 @@ export async function persistDomainStatusForDomain(domain: string, status: Persi
   if (error) throw error;
 }
 
+// Save contact email in store settings
+export async function saveStoreContactEmail(storeId: string, emailRaw: string): Promise<void> {
+  const email = String(emailRaw || '').trim().toLowerCase();
+  if (!email) throw new Error('Email is required');
+  const simple = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!simple.test(email)) throw new Error('Invalid email');
+  const { data: current, error: fetchErr } = await supabaseAdmin
+    .from('stores')
+    .select('settings')
+    .eq('id', storeId)
+    .single();
+  if (fetchErr) throw fetchErr;
+  const s = { ...(current?.settings || {}) } as any;
+  s.contactEmail = email;
+  const { error } = await supabaseAdmin
+    .from('stores')
+    .update({ settings: s })
+    .eq('id', storeId);
+  if (error) throw error;
+}
+
+// Domain audit log helper
+export async function logDomainAudit(action: string, params: { domain?: string; storeId?: string; ok?: boolean; message?: string }) {
+  try {
+    await supabaseAdmin.from('domain_audit').insert({
+      action,
+      domain: params.domain || null,
+      store_id: params.storeId || null,
+      ok: params.ok ?? null,
+      message: params.message || null,
+    });
+  } catch {
+    // best-effort
+  }
+}
+
 // Ensure unique domain ownership: clear previous owners of the same domain, then assign to the target store.
 export async function linkDomainUniquelyToStore(storeId: string, domain: string, verified = false): Promise<boolean> {
   const d = normalizeDomain(domain);

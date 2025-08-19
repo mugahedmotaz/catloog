@@ -9,6 +9,7 @@ import {
   linkDomainUniquelyToStore,
   clearDomainLinkIfMatches,
   persistDomainStatusForDomain,
+  saveStoreContactEmail,
   type SimpleStore,
 } from '../../services/domainsDb';
 
@@ -21,6 +22,7 @@ export default function AdminDomainsPage() {
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   const [owner, setOwner] = useState<SimpleStore | null>(null);
   const [domainStatuses, setDomainStatuses] = useState<Record<string, DomainStatus | null>>({});
+  const [contactEmail, setContactEmail] = useState<string>('');
 
   const canSubmit = useMemo(() => domain.trim().length > 3, [domain]);
 
@@ -40,6 +42,19 @@ export default function AdminDomainsPage() {
       await reloadDomains();
     } finally {
       setLoading(null);
+    }
+  };
+
+  const onSaveStoreEmail = async () => {
+    const sid = selectedStoreId || owner?.id || '';
+    const email = contactEmail.trim().toLowerCase();
+    if (!sid || !email) { alert('Select a store and enter an email'); return; }
+    try {
+      await saveStoreContactEmail(sid, email);
+      alert('Store email saved');
+      await reloadDomains();
+    } catch (e: any) {
+      alert(e?.message || 'Failed to save email');
     }
   };
 
@@ -137,6 +152,27 @@ export default function AdminDomainsPage() {
     await reloadDomains();
   };
 
+  // One-click: Add domain -> Check status -> Link to store -> Persist status
+  const onConnectAndLink = async () => {
+    const d = domain.trim();
+    if (!d) { alert('Please enter a domain'); return; }
+    if (!selectedStoreId) { alert('Please select a store to link'); return; }
+    setLoading('add');
+    try {
+      const addRes = await addDomain(d);
+      const status = await getDomainStatus(d);
+      await linkDomainUniquelyToStore(selectedStoreId, d, Boolean(status?.verified ?? addRes?.verified));
+      try { await persistDomainStatusForDomain(d, status); } catch {}
+      setResult(status);
+      setDomainStatuses((m) => ({ ...m, [d]: status }));
+      const o = await findStoreByCustomDomain(d);
+      setOwner(o);
+      await reloadDomains();
+    } finally {
+      setLoading(null);
+    }
+  };
+
   const onUnlinkFromOwner = async () => {
     if (!owner) return;
     await clearStoreCustomDomain(owner.id);
@@ -188,6 +224,20 @@ export default function AdminDomainsPage() {
               disabled={!domain.trim() || !selectedStoreId}
               className="mt-2 px-3 py-2 rounded bg-indigo-600 text-white disabled:opacity-60"
             >Link domain to selected store</button>
+            <div className="mt-4">
+              <label className="block text-sm font-medium mb-1">Store Email</label>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  placeholder="owner@yourdomain.com"
+                  className="flex-1 border rounded px-3 py-2"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                />
+                <button onClick={onSaveStoreEmail} className="px-3 py-2 rounded bg-teal-600 text-white">Save</button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">سيتم حفظه في settings.contactEmail للمتجر المحدد.</p>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Current owner</label>
@@ -208,6 +258,11 @@ export default function AdminDomainsPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            onClick={onConnectAndLink}
+            disabled={!canSubmit || !selectedStoreId || loading !== null}
+            className="px-4 py-2 rounded bg-indigo-600 text-white disabled:opacity-60"
+          >{loading === 'add' ? 'Processing…' : 'Connect & Link (one click)'}</button>
           <button
             onClick={onAdd}
             disabled={!canSubmit || loading !== null}

@@ -60,6 +60,8 @@ export default async function handler(req: Request): Promise<Response> {
         };
         const { error: upErr } = await supabaseAdmin.from('stores').update({ settings: patch }).eq('id', row.id);
         if (upErr) throw upErr;
+        // audit log (best-effort)
+        try { await supabaseAdmin.from('domain_audit').insert({ action: 'cron_refresh', domain, store_id: row.id, ok: true, message: null }); } catch {}
         results.push({ storeId: row.id, domain, ok: true, verified: !!status?.verified });
       } catch (e: any) {
         // Save failure as status too
@@ -69,6 +71,7 @@ export default async function handler(req: Request): Promise<Response> {
           domainLastCheckedAt: new Date().toISOString(),
         };
         await supabaseAdmin.from('stores').update({ settings: patch }).eq('id', row.id);
+        try { await supabaseAdmin.from('domain_audit').insert({ action: 'cron_refresh', domain, store_id: row.id, ok: false, message: e?.message || 'Failed' }); } catch {}
         results.push({ storeId: row.id, domain, ok: false, error: e?.message || 'Failed' });
       }
     }
